@@ -1,2 +1,4 @@
 .vscode
 .antlr
+antlr.jar
+node_modules

@@ -1,0 +1,32 @@
+{
+  "name": "reactive-lang",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "npx webpack --config webpack.config.js"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.7.0",
+    "@babel/preset-env": "^7.7.1",
+    "babel-loader": "^8.0.6",
+    "webpack": "^4.41.2",
+    "webpack-cli": "^3.3.10"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sahandevs/reactive-lang.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sahandevs/reactive-lang/issues"
+  },
+  "homepage": "https://github.com/sahandevs/reactive-lang#readme",
+  "dependencies": {
+    "antlr4": "^4.7.2",
+    "antlr4-editor": "^1.0.77",
+    "electron": "^7.1.0",
+    "fs": "0.0.1-security"
+  }
+}

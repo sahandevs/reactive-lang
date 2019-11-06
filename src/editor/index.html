@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>ReactiveGrammer TEST</title>
+    </head>
+    <body>
+        <script>
+            window.onerror = (e) => {
+                document.getElementById('log').innerText = e;
+            }    
+        </script>
+        <p id="log"></p>
+        <link rel="stylesheet" type="text/css" href="./css/codemirror-icons.css">
+        <link rel="stylesheet" type="text/css" href="./css/codemirror-editor.css">
+        <link rel="stylesheet" type="text/css" href="./css/codemirror-all-themes.css">
+        <!-- <script src="./test.js" type="text/javascript"></script> -->
+        <script src="./bundle.js" type="text/javascript"></script>
+    </body>
+</html>
