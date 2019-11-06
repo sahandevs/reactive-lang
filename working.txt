@@ -1,0 +1,25 @@
+namespace OuterNameSpace { 
+    namespace InnerNameSpace {
+
+    }
+
+    namespace InnerNameSpace2 {
+        enum Test {
+            Case1
+            Case2 Case3
+        }
+    }
+}
+
+struct Test {
+    
+}
+
+struct attribute Test {
+    firstProp: Core:String default (var true)
+    secondProp: Core:String default ("test")
+    number: Core:String default (11)
+    numberFloat: Core:String default (11.0)
+    numberFloat: Core:String default (-11.0)
+    numberFloat: Core:String default (11.0) default (11.0)
+}
