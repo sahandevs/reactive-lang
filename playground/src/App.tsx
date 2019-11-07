@@ -9,6 +9,7 @@ import { debounce } from "lodash";
 import AceEditor from "react-ace";
 import "./ACEReactiveMode";
 import "ace-builds/src-noconflict/theme-dracula";
+import { example1 } from "./example.json";
 
 class EnterFunctionListener implements ReactiveGrammerListener {
   constructor(private logger: (v: string) => void) {}
@@ -27,7 +28,7 @@ class EnterFunctionListener implements ReactiveGrammerListener {
 const App: React.FC = () => {
   const [logValue, setLogValue] = React.useState("");
   const [errorValue, setErrorValue] = React.useState("");
-  const [value, setValue] = React.useState("");
+  const [value, setValue] = React.useState(example1);
 
   function logger(value: string) {
     setLogValue(v => `${v}\n${value}`);
@@ -36,6 +37,8 @@ const App: React.FC = () => {
   const listener = React.useMemo(() => {
     return new EnterFunctionListener(logger);
   }, []);
+
+  React.useEffect(() => update(value), []); // eslint-disable-line
 
   function update(code: string) {
     const start = performance.now();
@@ -82,7 +85,7 @@ ${e}
           theme="dracula"
           onChange={v => {
             setValue(v);
-            updateHandler(v)
+            updateHandler(v);
           }}
           value={value}
           name="UNIQUE_ID_OF_DIV"
