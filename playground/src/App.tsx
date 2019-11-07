@@ -2,40 +2,29 @@ import React from "react";
 import "./App.css";
 import { ANTLRInputStream, CommonTokenStream } from "antlr4ts";
 import { ReactiveGrammerLexer } from "./Parser/ReactiveGrammerLexer";
-import { ReactiveGrammerParser, StructBlockItemContext, NameDefinitionContext } from "./Parser/ReactiveGrammerParser";
-import { ReactiveGrammerListener } from "./Parser/ReactiveGrammerListener";
-import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
+import { ReactiveGrammerParser } from "./Parser/ReactiveGrammerParser";
 import { debounce } from "lodash";
 import AceEditor from "react-ace";
 import "./ACEReactiveMode";
 import "ace-builds/src-noconflict/theme-dracula";
 import { example1 } from "./example.json";
-
-class EnterFunctionListener implements ReactiveGrammerListener {
-  constructor(private logger: (v: string) => void) {}
-
-  enterNameDefinition(ctx: NameDefinitionContext) {
-    const name = ctx.IDENTIFIER();
-    const options = ctx.nameOptions().map(x => x.refrenceName().text);
-    this.logger("name def->" + name + " ===" + options);
-  }
-
-  enterStructBlockItem(ctx: StructBlockItemContext) {
-    this.logger("struct block starts at " + ctx._start.line);
-  }
-}
+import { ReactiveListener } from "./Solver/Listener";
+import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
+import { ReactiveGrammerListener } from "./Parser/ReactiveGrammerListener";
+import { Solver } from "./Solver/Solver";
 
 const App: React.FC = () => {
   const [logValue, setLogValue] = React.useState("");
   const [errorValue, setErrorValue] = React.useState("");
   const [value, setValue] = React.useState(example1);
+  const [solver, setSolver] = React.useState<Solver | null>(null);
 
   function logger(value: string) {
     setLogValue(v => `${v}\n${value}`);
   }
 
   const listener = React.useMemo(() => {
-    return new EnterFunctionListener(logger);
+    return new ReactiveListener(logger, s => setSolver(s));
   }, []);
 
   React.useEffect(() => update(value), []); // eslint-disable-line
@@ -67,6 +56,7 @@ ${e}
       if (parser.numberOfSyntaxErrors === 0) {
         setErrorValue("");
       }
+
       ParseTreeWalker.DEFAULT.walk<ReactiveGrammerListener>(listener, tree);
     } catch (e) {
       setLogValue("error :" + e);
@@ -94,7 +84,15 @@ ${e}
         />
         <div style={{ display: "flex", flexDirection: "row" }}>
           <textarea style={{ width: 600, minHeight: 300, marginTop: 20, opacity: 0.6 }} readOnly value={logValue} />
-          <textarea style={{ width: 600, minHeight: 300, marginTop: 20, opacity: 0.6 }} readOnly value={errorValue} />
+          <textarea style={{ width: 200, minHeight: 300, marginTop: 20, opacity: 0.6 }} readOnly value={errorValue} />
+        </div>
+        <div style={{ display: "flex", flexDirection: "row" }}>
+          {solver != null &&
+            solver.getStructFullNames().map((structFullName, i) => (
+              <button onClick={() => console.log(solver.instantiateStruct(structFullName))} key={i}>
+                {structFullName}
+              </button>
+            ))}
         </div>
       </header>
     </div>

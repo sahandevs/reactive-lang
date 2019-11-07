@@ -20,3 +20,14 @@
 .App-link {
   color: #09d3ac;
 }
+
+button {
+  margin: 5px;
+  background-color: rgba(0,0,0,0.5);
+  color: white;
+  padding: 4px;
+  padding-left: 10px;
+  padding-right: 10px;
+  border-style: none;
+  border-radius: 5px;
+}
