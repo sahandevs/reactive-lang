@@ -1,6 +1,13 @@
 import { Struct, Property } from "./Models";
 import { Observable, BehaviorSubject, isObservable } from "rxjs";
 import { getStructFullName, Solver } from "./Solver";
+import {
+  PropertyDefaultOptionContext,
+  ExpressionContext,
+  AtomContext,
+  RefrenceExpressionContext,
+  LabelRefrenceMemberAccessExpressionContext
+} from "../Parser/ReactiveGrammerParser";
 
 function isSubject(value: any): value is BehaviorSubject<any> {
   return typeof value.next === "function" && isObservable(value);
@@ -45,6 +52,7 @@ export class StructInstance {
   private initPropertyWithDefaultOption(prop: Property): Instance {
     const context = prop.defaultOption!.context;
     const isVar = prop.defaultOption!.isVar;
+    console.log(calculatePropDeps(context.expression()));
     const primitiveExp = context
       .expression()
       .atom()!
@@ -59,4 +67,41 @@ export class StructInstance {
     }
     throw new Error(`cant init ${prop}`);
   }
+}
+
+function calculatePropDeps(ctx: ExpressionContext): string[] {
+  // if atom.refrenceExpression.labelRefrence? add refrence else
+  const expressions = ctx.expression();
+
+  // is multi expression or not ?
+  if (Array.isArray(expressions)) {
+    if (expressions.length !== 2) return [];
+    return [...calculatePropDeps(expressions[0]), ...calculatePropDeps(expressions[1])];
+  } else if (ctx.NOT()) {
+    // is not expression ?
+    return calculatePropDeps(expressions as any);
+  } else {
+    const expression = (expressions as unknown) as ExpressionContext;
+    // is atom?
+    const atmoExp = expression.atom() as AtomContext;
+    if (atmoExp) {
+      const refrenceExpression = atmoExp.refrenceExpression() as RefrenceExpressionContext;
+      if (refrenceExpression) {
+        const labelExpression = refrenceExpression.labelRefrenceMemberAccessExpression() as LabelRefrenceMemberAccessExpressionContext;
+        if (labelExpression) {
+          return [labelExpression.text];
+        }
+      } else {
+        /*
+	primitiveExpression
+	| conditionalValueExpression
+	| newStructExpression
+	| arrayExpression
+	| namedCollectionExpression
+      */
+      }
+    } else {
+    }
+  }
+  return [];
 }
