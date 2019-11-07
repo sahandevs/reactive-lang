@@ -6,15 +6,17 @@ function isSubject(value: any): value is BehaviorSubject<any> {
   return typeof value.next === "function" && isObservable(value);
 }
 
-interface PropertyInstance<T> {
-  instance: Observable<T> | StructInstance;
+export type Instance = Observable<any> | StructInstance;
+
+interface PropertyInstance {
+  instance: Instance;
   property: Property;
 }
 
 export class StructInstance {
   typeFullname: string;
   private inited = false;
-  private properties: { [key: string]: PropertyInstance<any> } = {};
+  private properties: { [key: string]: PropertyInstance } = {};
 
   constructor(private schema: Struct, private solver: Solver) {
     this.typeFullname = getStructFullName(schema);
@@ -24,7 +26,7 @@ export class StructInstance {
     this.inited = true;
     // create observable instances
     this.schema.properties.forEach(prop => {
-      let instance: Observable<any> | StructInstance;
+      let instance: Instance;
       if (prop.defaultOption == null) {
         let _instance = initialValue[prop.name];
         if (_instance == null) throw new Error(`${prop.name} must be provided`);
@@ -32,7 +34,7 @@ export class StructInstance {
       } else {
         instance = new BehaviorSubject("");
       }
-      const propInstance: PropertyInstance<any> = {
+      const propInstance: PropertyInstance = {
         property: prop,
         instance: instance
       };

@@ -1,5 +1,6 @@
 import { Namespace, Struct, isNamespace, isStruct } from "./Models";
-import { StructInstance } from "./StructInstance";
+import { StructInstance, Instance } from "./StructInstance";
+import { Observable, BehaviorSubject } from "rxjs";
 
 export interface Application {
   root: Namespace;
@@ -54,7 +55,35 @@ export class Solver {
     return this.structs.map(x => getStructFullName(x));
   }
 
-  instantiateStruct(fullName: string): StructInstance {
+  instantiateStruct(fullName: string): Instance {
+    let instance = this.tryInstantiateCoreTypes(fullName);
+    if (instance) return instance;
     return new StructInstance(getStructFromFullname(fullName, this.root), this);
   }
+
+  tryInstantiateCoreTypes(fullName: string, isVar: boolean = false): Observable<any> | null {
+    let observable: BehaviorSubject<any> | null = null;
+    if (fullName === core`String`) {
+      observable = new BehaviorSubject("");
+    } else if (fullName === core`Int`) {
+      observable = new BehaviorSubject(0);
+    } else if (fullName.startsWith(core`List`)) {
+      observable = new BehaviorSubject([]);
+    } else if (fullName.startsWith(core`Core:NamedCollection`)) {
+      observable = new BehaviorSubject({});
+    } else if (fullName.startsWith(core`Var`)) {
+      const reducedName = fullName.replace(core`Var`, '').replace('of', '').trimLeft();
+      observable = this.tryInstantiateCoreTypes(reducedName, true) as any;
+      isVar = true;
+    }
+
+    if (observable != null && !isVar) {
+      return observable.asObservable();
+    }
+
+    return observable;
+  }
+}
+function core(a: TemplateStringsArray): string {
+  return `Core:${a}`;
 }
