@@ -55,25 +55,25 @@ export class Solver {
     return this.structs.map(x => getStructFullName(x));
   }
 
-  instantiateStruct(fullName: string): Instance {
+  instantiateStruct(fullName: string, defaultValue: any = null): Instance {
     let instance = this.tryInstantiateCoreTypes(fullName);
     if (instance) return instance;
     return new StructInstance(getStructFromFullname(fullName, this.root), this);
   }
 
-  tryInstantiateCoreTypes(fullName: string, isVar: boolean = false): Observable<any> | null {
+  tryInstantiateCoreTypes(fullName: string, isVar: boolean = false, defaultValue: any = null): Observable<any> | null {
     let observable: BehaviorSubject<any> | null = null;
-    if (fullName === core`String`) {
-      observable = new BehaviorSubject("");
-    } else if (fullName === core`Int`) {
-      observable = new BehaviorSubject(0);
-    } else if (fullName.startsWith(core`List`)) {
-      observable = new BehaviorSubject([]);
-    } else if (fullName.startsWith(core`Core:NamedCollection`)) {
-      observable = new BehaviorSubject({});
-    } else if (fullName.startsWith(core`Var`)) {
-      const reducedName = fullName.replace(core`Var`, '').replace('of', '').trimLeft();
-      observable = this.tryInstantiateCoreTypes(reducedName, true) as any;
+    if (fullName === `Core:String`) {
+      observable = new BehaviorSubject(defaultValue);
+    } else if (fullName === `Core:Int`) {
+      observable = new BehaviorSubject(defaultValue);
+    } else if (fullName.startsWith(`Core:List`)) {
+      observable = new BehaviorSubject(defaultValue);
+    } else if (fullName.startsWith(`Core:Core:NamedCollection`)) {
+      observable = new BehaviorSubject(defaultValue);
+    } else if (fullName.startsWith(`Core:Var`)) {
+      const reducedName = fullName.replace(`Core:Var`, '').replace('of', '').trimLeft();
+      observable = this.tryInstantiateCoreTypes(reducedName, true, defaultValue) as any;
       isVar = true;
     }
 
@@ -83,7 +83,4 @@ export class Solver {
 
     return observable;
   }
-}
-function core(a: TemplateStringsArray): string {
-  return `Core:${a}`;
 }

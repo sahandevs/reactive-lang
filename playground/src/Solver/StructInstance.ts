@@ -15,7 +15,7 @@ interface PropertyInstance {
 
 export class StructInstance {
   typeFullname: string;
-  private inited = false;
+  inited = false;
   private properties: { [key: string]: PropertyInstance } = {};
 
   constructor(private schema: Struct, private solver: Solver) {
@@ -32,7 +32,7 @@ export class StructInstance {
         if (_instance == null) throw new Error(`${prop.name} must be provided`);
         instance = _instance;
       } else {
-        instance = new BehaviorSubject("");
+        instance = this.initPropertyWithDefaultOption(prop);
       }
       const propInstance: PropertyInstance = {
         property: prop,
@@ -40,5 +40,23 @@ export class StructInstance {
       };
       this.properties[prop.name] = propInstance;
     });
+  }
+
+  private initPropertyWithDefaultOption(prop: Property): Instance {
+    const context = prop.defaultOption!.context;
+    const isVar = prop.defaultOption!.isVar;
+    const primitiveExp = context
+      .expression()
+      .atom()!
+      .primitiveExpression()!;
+    let stringEXP = primitiveExp.StringLiteral();
+    if (stringEXP) {
+      return this.solver.tryInstantiateCoreTypes("Core:String", isVar, stringEXP.text)!;
+    }
+    let boolEXP = primitiveExp.BooleanLiteral();
+    if (boolEXP) {
+      return this.solver.tryInstantiateCoreTypes("Core:Boolean", isVar, boolEXP.text)!;
+    }
+    throw new Error(`cant init ${prop}`);
   }
 }

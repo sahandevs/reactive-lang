@@ -73,7 +73,10 @@ export class ReactiveListener implements ReactiveGrammerListener {
         name: ctx.typeRefrence().text
       },
       type: NodeTypes.Property,
-      defaultOption: propertyDefaultOptionContext == null ? null : {}
+      defaultOption: propertyDefaultOptionContext == null ? null : {
+        context: propertyDefaultOptionContext,
+        isVar: propertyDefaultOptionContext!.VAR() != null,
+      },
     };
     this.currentStruct!.properties.push(property);
   }

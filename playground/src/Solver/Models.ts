@@ -1,3 +1,5 @@
+import { PropertyDefaultOptionContext } from "../Parser/ReactiveGrammerParser";
+
 export type Identifier = string;
 
 export interface Namespace {
@@ -19,7 +21,8 @@ export interface Struct {
 }
 
 export interface PropertyDefaultOption {
-
+  context: PropertyDefaultOptionContext;
+  isVar: boolean;
 }
 
 export interface Property {
