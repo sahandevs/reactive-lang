@@ -5,6 +5,10 @@ import { ReactiveGrammerLexer } from "./Parser/ReactiveGrammerLexer";
 import { ReactiveGrammerParser, StructBlockItemContext, NameDefinitionContext } from "./Parser/ReactiveGrammerParser";
 import { ReactiveGrammerListener } from "./Parser/ReactiveGrammerListener";
 import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
+import { debounce } from "lodash";
+import AceEditor from "react-ace";
+import "./ACEReactiveMode";
+import "ace-builds/src-noconflict/theme-dracula";
 
 class EnterFunctionListener implements ReactiveGrammerListener {
   constructor(private logger: (v: string) => void) {}
@@ -12,7 +16,7 @@ class EnterFunctionListener implements ReactiveGrammerListener {
   enterNameDefinition(ctx: NameDefinitionContext) {
     const name = ctx.IDENTIFIER();
     const options = ctx.nameOptions().map(x => x.refrenceName().text);
-    this.logger("name def->" + name + ' ===' + options);
+    this.logger("name def->" + name + " ===" + options);
   }
 
   enterStructBlockItem(ctx: StructBlockItemContext) {
@@ -22,6 +26,8 @@ class EnterFunctionListener implements ReactiveGrammerListener {
 
 const App: React.FC = () => {
   const [logValue, setLogValue] = React.useState("");
+  const [errorValue, setErrorValue] = React.useState("");
+  const [value, setValue] = React.useState("");
 
   function logger(value: string) {
     setLogValue(v => `${v}\n${value}`);
@@ -40,9 +46,24 @@ const App: React.FC = () => {
       let lexer = new ReactiveGrammerLexer(inputStream);
       let tokenStream = new CommonTokenStream(lexer);
       let parser = new ReactiveGrammerParser(tokenStream);
-
+      parser.removeErrorListeners();
+      parser.addErrorListener({
+        syntaxError: (recognizer, offendingSymbol, line, column, msg, e) => {
+          setErrorValue(
+            `
+error at ${line}-${column}
+${msg}
+Symbol: ${offendingSymbol}
+${e}
+            `
+          );
+        }
+      });
       let tree = parser.sourceFile();
 
+      if (parser.numberOfSyntaxErrors === 0) {
+        setErrorValue("");
+      }
       ParseTreeWalker.DEFAULT.walk<ReactiveGrammerListener>(listener, tree);
     } catch (e) {
       setLogValue("error :" + e);
@@ -51,11 +72,27 @@ const App: React.FC = () => {
     logger(`========== took ${duration}ms to parse and walk`);
   }
 
+  const updateHandler = React.useCallback(debounce(update, 100), []);
+
   return (
     <div className="App">
       <header className="App-header">
-        <textarea style={{ width: 500, minHeight: 400 }} onChange={v => update(v.target.value)} />
-        <textarea style={{ width: 500, minHeight: 300, marginTop: 20, opacity: 0.6 }} readOnly value={logValue} />
+        <AceEditor
+          mode="reactive-mode"
+          theme="dracula"
+          onChange={v => {
+            setValue(v);
+            updateHandler(v)
+          }}
+          value={value}
+          name="UNIQUE_ID_OF_DIV"
+          editorProps={{ $blockScrolling: true }}
+          style={{ width: 1000 }}
+        />
+        <div style={{ display: "flex", flexDirection: "row" }}>
+          <textarea style={{ width: 600, minHeight: 300, marginTop: 20, opacity: 0.6 }} readOnly value={logValue} />
+          <textarea style={{ width: 600, minHeight: 300, marginTop: 20, opacity: 0.6 }} readOnly value={errorValue} />
+        </div>
       </header>
     </div>
   );
