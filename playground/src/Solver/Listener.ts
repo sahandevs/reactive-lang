@@ -1,7 +1,7 @@
 import * as C from "../Parser/ReactiveGrammerParser";
 import { ReactiveGrammerListener } from "../Parser/ReactiveGrammerListener";
 import { describeNamespaceTree } from "./Utils";
-import { Namespace, Struct, NodeTypes } from "./Models";
+import { Namespace, Struct, NodeTypes, Property } from "./Models";
 import { Solver } from "./Solver";
 
 export class ReactiveListener implements ReactiveGrammerListener {
@@ -43,13 +43,39 @@ export class ReactiveListener implements ReactiveGrammerListener {
     this.currentNamespace = this.currentNamespace.parent == null ? this.rootNamespace : this.currentNamespace.parent;
   }
 
+  currentStruct: Struct | null = null;
+
   enterStructDefinition(ctx: C.StructDefinitionContext) {
     const struct: Struct = {
       type: NodeTypes.Struct,
       name: ctx.labelableIdentifier().IDENTIFIER().text,
-      parent: this.currentNamespace
+      parent: this.currentNamespace,
+      properties: []
     };
     this.currentNamespace.children.push(struct);
+    this.currentStruct = struct;
+  }
+
+  exitStructDefinition() {
+    this.currentStruct = null;
+  }
+
+  enterPropertyDefinition(ctx: C.PropertyDefinitionContext) {
+    let propertyDefaultOptionContext: C.PropertyDefaultOptionContext | null = null;
+    ctx.propertyOptions().forEach(option => {
+      propertyDefaultOptionContext = option.propertyDefaultOption()!;
+    });
+
+    const property: Property = {
+      name: ctx.IDENTIFIER().text,
+      parent: this.currentStruct!,
+      typeName: {
+        name: ctx.typeRefrence().text
+      },
+      type: NodeTypes.Property,
+      defaultOption: propertyDefaultOptionContext == null ? null : {}
+    };
+    this.currentStruct!.properties.push(property);
   }
 
   exitSourceFile() {

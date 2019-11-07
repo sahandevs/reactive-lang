@@ -17,7 +17,7 @@ function flatStructsFromNamespace(root: Namespace): Struct[] {
   return result;
 }
 
-function getStructFullName(struct: Struct): string {
+export function getStructFullName(struct: Struct): string {
   let suffix = "";
   let parent: Namespace | null = struct.parent;
   while (parent != null && parent.name !== "root") {
@@ -55,6 +55,6 @@ export class Solver {
   }
 
   instantiateStruct(fullName: string): StructInstance {
-    return new StructInstance(getStructFromFullname(fullName, this.root));
+    return new StructInstance(getStructFromFullname(fullName, this.root), this);
   }
 }

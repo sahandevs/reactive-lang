@@ -1,3 +1,4 @@
 {
-    "example1": "namespace Namespace1 {\n        struct SI {}\n        namespace NameSpace2 {\n            struct SII {}\n        }\n    }\nstruct SOO {}"
+    "example1": "namespace Namespace1 {\n        struct SI {}\n        namespace NameSpace2 {\n            struct SII {}\n        }\n    }\nstruct SOO {}",
+    "example2": "struct Test {\n  prop1: Core:String\n  prop2: Core:String default (\"\")\n}"
 }

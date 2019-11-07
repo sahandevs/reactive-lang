@@ -7,7 +7,7 @@ import { debounce } from "lodash";
 import AceEditor from "react-ace";
 import "./ACEReactiveMode";
 import "ace-builds/src-noconflict/theme-dracula";
-import { example1 } from "./example.json";
+import { example2 as example } from "./example.json";
 import { ReactiveListener } from "./Solver/Listener";
 import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
 import { ReactiveGrammerListener } from "./Parser/ReactiveGrammerListener";
@@ -16,7 +16,7 @@ import { Solver } from "./Solver/Solver";
 const App: React.FC = () => {
   const [logValue, setLogValue] = React.useState("");
   const [errorValue, setErrorValue] = React.useState("");
-  const [value, setValue] = React.useState(example1);
+  const [value, setValue] = React.useState(example);
   const [solver, setSolver] = React.useState<Solver | null>(null);
 
   function logger(value: string) {
