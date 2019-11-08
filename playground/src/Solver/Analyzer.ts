@@ -96,6 +96,19 @@ function flattenNestedAtomExpression(ctx: AtomContext): AtomContext[] {
       .flatMap(x => x);
   }
 
+  const newStructCtx = ctx.newStructExpression();
+  if (newStructCtx != null) {
+    const parameterBody = newStructCtx.parameters().parameterBody();
+    if (parameterBody == null) return [ctx]; //
+    return [
+      ctx,
+      ...parameterBody
+        .expression()
+        .map(x => flattenAllExpressionsToAtoms(x))
+        .flatMap(x => x)
+    ];
+  }
+
   return [ctx];
 }
 
