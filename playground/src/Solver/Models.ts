@@ -1,4 +1,4 @@
-import { PropertyDefaultOptionContext } from "../Parser/ReactiveGrammerParser";
+import { PropertyDefaultOptionContext, StructDefinitionContext } from "../Parser/ReactiveGrammerParser";
 
 export type Identifier = string;
 
@@ -10,7 +10,7 @@ export interface Namespace {
 }
 
 export interface TypeName {
-  name: String
+  name: String;
 }
 
 export interface Struct {
@@ -18,6 +18,7 @@ export interface Struct {
   name: Identifier;
   parent: Namespace;
   properties: Property[];
+  context: StructDefinitionContext;
 }
 
 export interface PropertyDefaultOption {

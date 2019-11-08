@@ -50,7 +50,8 @@ export class ReactiveListener implements ReactiveGrammerListener {
       type: NodeTypes.Struct,
       name: ctx.labelableIdentifier().IDENTIFIER().text,
       parent: this.currentNamespace,
-      properties: []
+      properties: [],
+      context: ctx
     };
     this.currentNamespace.children.push(struct);
     this.currentStruct = struct;
@@ -73,10 +74,13 @@ export class ReactiveListener implements ReactiveGrammerListener {
         name: ctx.typeRefrence().text
       },
       type: NodeTypes.Property,
-      defaultOption: propertyDefaultOptionContext == null ? null : {
-        context: propertyDefaultOptionContext,
-        isVar: propertyDefaultOptionContext!.VAR() != null,
-      },
+      defaultOption:
+        propertyDefaultOptionContext == null
+          ? null
+          : {
+              context: propertyDefaultOptionContext,
+              isVar: propertyDefaultOptionContext!.VAR() != null
+            }
     };
     this.currentStruct!.properties.push(property);
   }
