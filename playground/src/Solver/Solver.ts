@@ -6,7 +6,7 @@ export interface Application {
   root: Namespace;
 }
 
-function flatStructsFromNamespace(root: Namespace): Struct[] {
+export function flatStructsFromNamespace(root: Namespace): Struct[] {
   let result: Struct[] = [];
   root.children.forEach(element => {
     if (isNamespace(element)) {
@@ -46,7 +46,7 @@ function getStructFromFullname(fullname: string, namespace: Namespace): Struct {
 export class Solver {
   private structs: Struct[];
 
-  constructor(private root: Namespace) {
+  constructor(public root: Namespace) {
     this.structs = flatStructsFromNamespace(root);
     // analyzer
   }
@@ -72,7 +72,10 @@ export class Solver {
     } else if (fullName.startsWith(`Core:Core:NamedCollection`)) {
       observable = new BehaviorSubject(defaultValue);
     } else if (fullName.startsWith(`Core:Var`)) {
-      const reducedName = fullName.replace(`Core:Var`, '').replace('of', '').trimLeft();
+      const reducedName = fullName
+        .replace(`Core:Var`, "")
+        .replace("of", "")
+        .trimLeft();
       observable = this.tryInstantiateCoreTypes(reducedName, true, defaultValue) as any;
       isVar = true;
     }
