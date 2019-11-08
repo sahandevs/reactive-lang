@@ -14,7 +14,7 @@ import { ReactiveListener } from "./Solver/Listener";
 import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
 import { ReactiveGrammerListener } from "./Parser/ReactiveGrammerListener";
 import { Solver } from "./Solver/Solver";
-import { StructDependencyAnalyzer } from "./Solver/Analyzer";
+import { StructDependencyAnalyzer } from "./Solver/Analyzer/StructDependencyAnalyzer";
 
 const App: React.FC = () => {
   const [logValue, setLogValue] = React.useState("");

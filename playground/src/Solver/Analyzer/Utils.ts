@@ -1,25 +1,8 @@
-import { Namespace, Struct } from "./Models";
-import { flatStructsFromNamespace } from "./Solver";
-import { AtomContext, ExpressionContext } from "../Parser/ReactiveGrammerParser";
+import { ExpressionContext, AtomContext } from "../../Parser/ReactiveGrammerParser";
 
-export class StructDependencyAnalyzer {
-  private structs: Struct[];
+import { Struct } from "../Models";
 
-  constructor(private root: Namespace) {
-    this.structs = flatStructsFromNamespace(root);
-  }
-
-  analyze(): string {
-    // get all new struct calls from each struct's properties
-    let result = "";
-    this.structs.forEach(struct => {
-      result += struct.name + " depends on :" + getAllNewStructCalls(struct).join(", ") + "\n";
-    });
-    return result;
-  }
-}
-
-function flattenAllExpressionsToAtoms(ctx: ExpressionContext): AtomContext[] {
+export function flattenAllExpressionsToAtoms(ctx: ExpressionContext): AtomContext[] {
   // if atom.refrenceExpression.labelRefrence? add refrence else
   let expressions = ctx.expression();
   expressions = expressions.length === 0 ? [ctx] : expressions;
@@ -44,7 +27,7 @@ function flattenAllExpressionsToAtoms(ctx: ExpressionContext): AtomContext[] {
   return [];
 }
 
-function flattenNestedAtomExpression(ctx: AtomContext): AtomContext[] {
+export function flattenNestedAtomExpression(ctx: AtomContext): AtomContext[] {
   const conditionalCtx = ctx.conditionalValueExpression();
   if (conditionalCtx != null) {
     return [
@@ -112,7 +95,7 @@ function flattenNestedAtomExpression(ctx: AtomContext): AtomContext[] {
   return [ctx];
 }
 
-function getAllNewStructCalls(struct: Struct): string[] {
+export function getAllNewStructCalls(struct: Struct): string[] {
   let neededStructs: string[] = [];
   struct.properties.forEach(prop => {
     if (prop.defaultOption != null) {
