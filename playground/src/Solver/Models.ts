@@ -47,6 +47,6 @@ export function isStruct(value: any): value is Struct {
   return value.type === NodeTypes.Struct;
 }
 
-export function isProperty(value: any): value is Struct {
+export function isProperty(value: any): value is Property {
   return value.type === NodeTypes.Property;
 }

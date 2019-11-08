@@ -15,6 +15,7 @@ import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
 import { ReactiveGrammerListener } from "./Parser/ReactiveGrammerListener";
 import { Solver } from "./Solver/Solver";
 import { StructDependencyAnalyzer } from "./Solver/Analyzer/StructDependencyAnalyzer";
+import { StructPropertyDependencyAnalyzer } from "./Solver/Analyzer/StructPropertyDependencyAnalyzer";
 
 const App: React.FC = () => {
   const [logValue, setLogValue] = React.useState("");
@@ -80,6 +81,13 @@ ${e}
           }}
         >
           {"Analyzer:StructDependencyAnalyzer"}
+        </button>
+        <button
+          onClick={() => {
+            new StructPropertyDependencyAnalyzer(solver.getStructByName("Test")).analyze();
+          }}
+        >
+          {"Analyzer:StructPropertyDependencyAnalyzer"}
         </button>
       </div>
     );

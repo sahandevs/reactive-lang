@@ -51,6 +51,10 @@ export class Solver {
     // analyzer
   }
 
+  getStructByName(name: string): Struct {
+    return this.structs.find(x => getStructFullName(x) === name)!;
+  }
+
   getStructFullNames(): string[] {
     return this.structs.map(x => getStructFullName(x));
   }
