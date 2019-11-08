@@ -19,11 +19,13 @@ interface Node {
 export class StructPropertyDependencyAnalyzer {
   rootNode: Node;
   constructor(private root: Struct) {
+    const label = root.context.labelableIdentifier().label();
     this.rootNode = {
       dependencies: [],
       refrence: {
         isRaw: false,
-        value: root
+        value: root,
+        label: label == null ? undefined : label.text
       }
     };
   }
@@ -78,6 +80,7 @@ export class StructPropertyDependencyAnalyzer {
 function expressionToNode(ctx: ExpressionContext): Node[] {
   let expressions = ctx.expression();
   expressions = expressions.length === 0 ? [ctx] : expressions;
+  let label = ctx.LABEL_NAME() == null ? undefined : ctx.LABEL_NAME()!.text;
   // is multi expression or not ?
   if (expressions.length > 1) {
     return expressions.map(exp => {
@@ -85,7 +88,8 @@ function expressionToNode(ctx: ExpressionContext): Node[] {
         dependencies: expressionToNode(exp),
         refrence: {
           isRaw: false,
-          value: ctx
+          value: ctx,
+          label: label
         }
       };
     });
@@ -97,7 +101,8 @@ function expressionToNode(ctx: ExpressionContext): Node[] {
         dependencies: expressionToNode(exp),
         refrence: {
           isRaw: false,
-          value: ctx
+          value: ctx,
+          label: label
         }
       };
     });
@@ -107,7 +112,17 @@ function expressionToNode(ctx: ExpressionContext): Node[] {
     // is atom?
     const atomExp = expression.atom() as AtomContext;
     if (atomExp) {
-      return [atomToNode(atomExp)];
+      let node = atomToNode(atomExp);
+      return [
+        {
+          dependencies: [node],
+          refrence: {
+            isRaw: false,
+            value: expression,
+            label: label
+          }
+        }
+      ];
     }
   }
   return [];
