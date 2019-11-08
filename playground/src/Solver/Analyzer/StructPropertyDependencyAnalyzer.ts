@@ -2,7 +2,7 @@ import { Namespace, Struct, Property, NodeTypes, isStruct, isProperty } from "..
 import { flatStructsFromNamespace } from "../Solver";
 import { getAllNewStructCalls, flattenNestedAtomExpression } from "./Utils";
 import { ExpressionContext, AtomContext, RefrenceExpressionContext } from "../../Parser/ReactiveGrammerParser";
-type ResolvedRefrence = Struct | Property | ExpressionContext | AtomContext;
+type ResolvedRefrence = Struct | Property | ExpressionContext | AtomContext | Node;
 type RawRefrence = RefrenceExpressionContext;
 const NOT_WALKED_YET = "NOT_WALKED_YET";
 type Refrence = {
@@ -42,6 +42,7 @@ export class StructPropertyDependencyAnalyzer {
       };
     });
     this.resolveNodeDependencies(this.rootNode);
+    this.resolveRawRefrences(this.rootNode);
     console.log(this.rootNode);
   }
 
@@ -61,6 +62,12 @@ export class StructPropertyDependencyAnalyzer {
     if (node.dependencies !== NOT_WALKED_YET) {
       node.dependencies.forEach(d => this.resolveNodeDependencies(d));
     }
+  }
+
+  resolveRawRefrences(node: Node) {
+    // cache labels
+    let labelToNode: { [key: string]: Node } = getAllLabelsFromNode(node);
+    resolveRawRefrences(node, labelToNode);
   }
 
   private handleRRefNode(node: Node) {
@@ -159,4 +166,35 @@ function atomToNode(atom: AtomContext): Node {
       value: atom
     }
   };
+}
+
+function getAllLabelsFromNode(node: Node): { [key: string]: Node } {
+  let _labels: { [key: string]: Node } = {};
+  const label = node.refrence.label;
+  if (label != null) {
+    _labels[label] = node;
+  }
+  if (node.dependencies !== NOT_WALKED_YET) {
+    node.dependencies.forEach(dep => {
+      _labels = Object.assign(_labels, getAllLabelsFromNode(dep));
+    });
+  }
+  return _labels;
+}
+
+function resolveRawRefrences(node: Node, labelCache: { [key: string]: Node }) {
+  if (node.refrence.isRaw) {
+    let refExp = (node.refrence.value as any).refrenceExpression();
+    let ref = refExp.labelRefrenceMemberAccessExpression()!;
+    const labelName = ref.LABEL_NAME().text;
+    const targetNode = labelCache[labelName];
+    if (targetNode == null) {
+      throw new Error("cannot resolve label " + labelName);
+    }
+    node.refrence.isRaw = false;
+    node.refrence.value = targetNode;
+  }
+  if (node.dependencies !== NOT_WALKED_YET) {
+    node.dependencies.forEach(n => resolveRawRefrences(n, labelCache));
+  }
 }
