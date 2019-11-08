@@ -16,6 +16,10 @@ interface Node {
   refrence: Refrence;
 }
 
+function isNode(value: any): value is Node {
+  return value.refrence != null && typeof value.refrence.isRaw === "boolean";
+}
+
 export class StructPropertyDependencyAnalyzer {
   rootNode: Node;
   constructor(private root: Struct) {
@@ -43,6 +47,7 @@ export class StructPropertyDependencyAnalyzer {
     });
     this.resolveNodeDependencies(this.rootNode);
     this.resolveRawRefrences(this.rootNode);
+    console.log(checkCircularDependencies(this.rootNode, [], []));
     console.log(this.rootNode);
   }
 
@@ -197,4 +202,24 @@ function resolveRawRefrences(node: Node, labelCache: { [key: string]: Node }) {
   if (node.dependencies !== NOT_WALKED_YET) {
     node.dependencies.forEach(n => resolveRawRefrences(n, labelCache));
   }
+}
+
+function checkCircularDependencies(node: Node, resolved: Node[], seen: Node[]): string | null {
+  seen.push(node);
+  if (node.dependencies !== NOT_WALKED_YET) {
+    let deps = [...node.dependencies];
+    if (isNode(node.refrence.value)) {
+      deps.push(node.refrence.value);
+    }
+    deps.forEach(dep => {
+      if (!resolved.includes(dep)) {
+        if (seen.includes(dep)) {
+          return "Circular dependency found ";
+        }
+        checkCircularDependencies(dep, resolved, seen);
+      }
+    });
+  }
+  resolved.push(node);
+  return null;
 }
