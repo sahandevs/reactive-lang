@@ -107,7 +107,7 @@ function expressionToNode(ctx: ExpressionContext): Node[] {
         dependencies: [node],
         refrence: {
           isRaw: false,
-          value: atomExp
+          value: ctx
         }
       }
     ];

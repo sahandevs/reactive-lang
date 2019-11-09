@@ -48,8 +48,6 @@ function resolve(tree: InstanceNodeTree, initialValue: { [key: string]: Instance
 
   const source = tree.node.refrence.value;
 
-  if (handleAtom(source, tree)) return;
-
   if (isExpressionContext(source)) {
     // single expressions
     const expressions = source.expression();
@@ -137,6 +135,9 @@ function resolve(tree: InstanceNodeTree, initialValue: { [key: string]: Instance
       tree.instance = tree.dependecies[0].instance!;
     }
   }
+
+  // atom
+  handleAtom(source, tree);
 }
 
 type CondValueExp = {
@@ -144,7 +145,7 @@ type CondValueExp = {
   value: any;
 };
 
-function handleAtom(source: Refrence["value"], tree: InstanceNodeTree): boolean {
+function handleAtom(source: Refrence["value"], tree: InstanceNodeTree): void {
   // atom
   if (isAtomContext(source)) {
     // primitve
@@ -152,7 +153,7 @@ function handleAtom(source: Refrence["value"], tree: InstanceNodeTree): boolean 
     const primitiveCtx = source.primitiveExpression();
     if (primitiveCtx != null) {
       tree.instance = makePrimitive(primitiveCtx);
-      return true;
+      return;
     }
 
     // refrence
@@ -162,7 +163,7 @@ function handleAtom(source: Refrence["value"], tree: InstanceNodeTree): boolean 
       if (refrenceCtx.labelRefrenceMemberAccessExpression() != null) {
         // first dep of this node must be the resolved refrence
         tree.instance = tree.dependecies[0].instance;
-        return true;
+        return;
       } else {
         throw new Error("this type of refrence is not supported yet!");
       }
@@ -173,37 +174,41 @@ function handleAtom(source: Refrence["value"], tree: InstanceNodeTree): boolean 
     const conditionalCtx = source.conditionalValueExpression();
     if (conditionalCtx != null) {
       const hasElseBranch = conditionalCtx.conditionalValueExpressionElseBranch().length > 0;
-      tree.instance = combineLatest(tree.dependecies.map(x => x.instance!)).pipe(
-        map(deps => {
-          const trueBranch: CondValueExp = {
-            condition: deps[0],
-            value: deps[1]
-          };
-          if (trueBranch.condition) return trueBranch.value;
-          let elseIfBranches: CondValueExp[] = chunk(deps.slice(2, hasElseBranch ? deps.length - 1 : deps.length)).map(
-            x => {
+      if (tree.dependecies.length >= 2) {
+        tree.instance = combineLatest(tree.dependecies.map(x => x.instance!)).pipe(
+          map(deps => {
+            const trueBranch: CondValueExp = {
+              condition: deps[0],
+              value: deps[1]
+            };
+            if (trueBranch.condition) return trueBranch.value;
+            let elseIfBranches: CondValueExp[] = chunk(
+              deps.slice(2, hasElseBranch ? deps.length - 1 : deps.length)
+            ).map(x => {
               return {
                 condition: x[0],
                 value: x[1]
               };
+            });
+
+            for (let i = 0; i < elseIfBranches.length; i++) {
+              const element = elseIfBranches[i];
+              if (element.condition) return element.value;
             }
-          );
 
-          for (let i = 0; i < elseIfBranches.length; i++) {
-            const element = elseIfBranches[i];
-            if (element.condition) return element.value;
-          }
+            let elseBranch = hasElseBranch ? deps[deps.length - 1] : null;
 
-          let elseBranch = hasElseBranch ? deps[deps.length - 1] : null;
+            if (elseBranch != null) {
+              return elseBranch;
+            }
 
-          if (elseBranch != null) {
-            if (elseBranch.condition) return elseBranch.value;
-          }
-
-          throw new Error("not all paths returns a value");
-        })
-      );
-      return true;
+            throw new Error("not all paths returns a value");
+          })
+        );
+        return;
+      } else if (tree.dependecies.length === 1) {
+        tree.instance = tree.dependecies[0].instance;
+      }
     }
   }
 
@@ -216,7 +221,7 @@ function handleAtom(source: Refrence["value"], tree: InstanceNodeTree): boolean 
     }
   }
 
-  return false;
+  return;
 }
 
 function chunk<T>(input: T[], parts: number = 2): T[][] {
