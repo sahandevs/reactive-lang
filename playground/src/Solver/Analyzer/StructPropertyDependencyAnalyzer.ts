@@ -8,14 +8,14 @@ import {
 } from "../../Parser/ReactiveGrammerParser";
 type ResolvedRefrence = Struct | Property | ExpressionContext | AtomContext | Node;
 type RawRefrence = RefrenceExpressionContext;
-const NOT_WALKED_YET = "NOT_WALKED_YET";
-type Refrence = {
+export const NOT_WALKED_YET = "NOT_WALKED_YET";
+export type Refrence = {
   isRaw: boolean;
   value: ResolvedRefrence | RawRefrence;
   label?: string;
 };
 
-interface Node {
+export interface Node {
   dependencies: Node[] | "NOT_WALKED_YET";
   refrence: Refrence;
 }
@@ -36,6 +36,7 @@ export class StructPropertyDependencyAnalyzer {
         label: label == null ? undefined : label.text
       }
     };
+    this.analyze();
   }
 
   analyze() {
@@ -102,16 +103,24 @@ function expressionToNode(ctx: ExpressionContext): Node[] {
   let label = ctx.LABEL_NAME() == null ? undefined : ctx.LABEL_NAME()!.text;
   // is multi expression or not ?
   if (expressions.length > 1) {
-    return expressions.map(exp => {
-      return {
-        dependencies: expressionToNode(exp),
+    return [
+      {
+        dependencies: expressions.map(exp => {
+          return {
+            dependencies: expressionToNode(exp),
+            refrence: {
+              isRaw: false,
+              value: exp
+            }
+          };
+        }),
         refrence: {
           isRaw: false,
           value: ctx,
           label: label
         }
-      };
-    });
+      }
+    ];
   } else if (expressions.length === 1 && expressions[0].childCount > 1) {
     // like not, sum, + - and etc.
     // TODO: add aditional meta like this is a sum for later

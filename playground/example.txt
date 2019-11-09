@@ -1,0 +1,3 @@
+struct Test {\n  prop1: Core:String\n  prop2: Core:String default ("")\n}
+
+temp2.tree.dependecies.forEach((x, i) => x.instance.subscribe(p => console.log(i, p)))

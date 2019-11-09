@@ -1,6 +1,7 @@
 import { Namespace, Struct, isNamespace, isStruct } from "./Models";
-import { StructInstance, Instance } from "./StructInstance";
+import { NodeInstance, Instance } from "./NodeInstance";
 import { Observable, BehaviorSubject } from "rxjs";
+import { StructPropertyDependencyAnalyzer } from "./Analyzer/StructPropertyDependencyAnalyzer";
 
 export interface Application {
   root: Namespace;
@@ -59,10 +60,12 @@ export class Solver {
     return this.structs.map(x => getStructFullName(x));
   }
 
-  instantiateStruct(fullName: string, defaultValue: any = null): Instance {
+  instantiateStruct(fullName: string, defaultValue: any = null): NodeInstance | Instance {
     let instance = this.tryInstantiateCoreTypes(fullName);
     if (instance) return instance;
-    return new StructInstance(getStructFromFullname(fullName, this.root), this);
+    const struct = getStructFromFullname(fullName, this.root);
+    const node = new StructPropertyDependencyAnalyzer(struct);
+    return new NodeInstance(node.rootNode, this);
   }
 
   tryInstantiateCoreTypes(fullName: string, isVar: boolean = false, defaultValue: any = null): Observable<any> | null {
