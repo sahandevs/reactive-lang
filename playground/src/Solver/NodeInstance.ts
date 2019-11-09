@@ -2,11 +2,7 @@ import { Solver } from "./Solver";
 import { Observable, BehaviorSubject, combineLatest } from "rxjs";
 import { map } from "rxjs/operators";
 import { Node, NOT_WALKED_YET, Refrence } from "./Analyzer/StructPropertyDependencyAnalyzer";
-import {
-  AtomContext,
-  PrimitiveExpressionContext,
-  ExpressionContext
-} from "../Parser/ReactiveGrammerParser";
+import { AtomContext, PrimitiveExpressionContext, ExpressionContext } from "../Parser/ReactiveGrammerParser";
 import { isProperty } from "./Models";
 export type Instance = Observable<any> | NodeInstance;
 
@@ -123,6 +119,14 @@ function resolve(tree: InstanceNodeTree, initialValue: { [key: string]: Instance
       } else if (operator === "and") {
         tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
           map(([a, b]) => a && b)
+        );
+      } else if (operator === "==") {
+        tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
+          map(([a, b]) => a === b)
+        );
+      } else if (operator === "!=") {
+        tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
+          map(([a, b]) => a !== b)
         );
       } else {
         throw new Error("operator " + operator + " not supported yet!");
