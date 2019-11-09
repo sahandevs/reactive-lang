@@ -122,18 +122,24 @@ function expressionToNode(ctx: ExpressionContext): Node[] {
       }
     ];
   } else if (expressions.length === 1 && expressions[0].childCount > 1) {
-    // like not, sum, + - and etc.
-    // TODO: add aditional meta like this is a sum for later
-    return expressions[0].expression().map(exp => {
-      return {
-        dependencies: expressionToNode(exp),
+    return [
+      {
+        dependencies: expressions[0].expression().map(exp => {
+          return {
+            dependencies: expressionToNode(exp),
+            refrence: {
+              isRaw: false,
+              value: exp
+            }
+          };
+        }),
         refrence: {
           isRaw: false,
           value: ctx,
           label: label
         }
-      };
-    });
+      }
+    ];
   } else {
     let expression: ExpressionContext = expressions[0];
     if (expression == null) return [];

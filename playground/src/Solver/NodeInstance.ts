@@ -139,6 +139,11 @@ function resolve(tree: InstanceNodeTree, initialValue: { [key: string]: Instance
   }
 }
 
+type CondValueExp = {
+  condition: any;
+  value: any;
+};
+
 function handleAtom(source: Refrence["value"], tree: InstanceNodeTree): boolean {
   // atom
   if (isAtomContext(source)) {
@@ -163,7 +168,43 @@ function handleAtom(source: Refrence["value"], tree: InstanceNodeTree): boolean 
       }
     }
 
-    //
+    // conditional
+
+    const conditionalCtx = source.conditionalValueExpression();
+    if (conditionalCtx != null) {
+      const hasElseBranch = conditionalCtx.conditionalValueExpressionElseBranch().length > 0;
+      tree.instance = combineLatest(tree.dependecies.map(x => x.instance!)).pipe(
+        map(deps => {
+          const trueBranch: CondValueExp = {
+            condition: deps[0],
+            value: deps[1]
+          };
+          if (trueBranch.condition) return trueBranch.value;
+          let elseIfBranches: CondValueExp[] = chunk(deps.slice(2, hasElseBranch ? deps.length - 1 : deps.length)).map(
+            x => {
+              return {
+                condition: x[0],
+                value: x[1]
+              };
+            }
+          );
+
+          for (let i = 0; i < elseIfBranches.length; i++) {
+            const element = elseIfBranches[i];
+            if (element.condition) return element.value;
+          }
+
+          let elseBranch = hasElseBranch ? deps[deps.length - 1] : null;
+
+          if (elseBranch != null) {
+            if (elseBranch.condition) return elseBranch.value;
+          }
+
+          throw new Error("not all paths returns a value");
+        })
+      );
+      return true;
+    }
   }
 
   // expression atom
@@ -176,6 +217,14 @@ function handleAtom(source: Refrence["value"], tree: InstanceNodeTree): boolean 
   }
 
   return false;
+}
+
+function chunk<T>(input: T[], parts: number = 2): T[][] {
+  let result: T[][] = [];
+  for (let i = 0; i < input.length - 1; i += parts) {
+    result.push([input[i], input[i + 1]]);
+  }
+  return result;
 }
 
 function makePrimitive(atom: PrimitiveExpressionContext): Observable<any> {

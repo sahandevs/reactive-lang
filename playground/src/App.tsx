@@ -9,14 +9,25 @@ import "./ACEReactiveMode";
 import "ace-builds/src-noconflict/theme-dracula";
 import "ace-builds/src-noconflict/ext-searchbox";
 import "ace-builds/src-noconflict/ext-prompt";
-import { example4 as example } from "./example.json";
+// import { example4 as example } from "./example.json";
 import { ReactiveListener } from "./Solver/Listener";
 import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
 import { ReactiveGrammerListener } from "./Parser/ReactiveGrammerListener";
 import { Solver } from "./Solver/Solver";
 import { StructDependencyAnalyzer } from "./Solver/Analyzer/StructDependencyAnalyzer";
 import { StructPropertyDependencyAnalyzer } from "./Solver/Analyzer/StructPropertyDependencyAnalyzer";
-
+const example = `
+struct ($this Test) {
+  propIn: Core:String
+  prop1: Core:String default ("Hi !" + $this.propIn)
+  prop2: Core:String default ("test" + ($lbl $this.prop1) + "test" + $this.prop1 + $this.prop3)
+  prop3: Core:Number default ((
+    if (true)
+        1
+    else
+        2
+  ))
+}`;
 const App: React.FC = () => {
   const [logValue, setLogValue] = React.useState("");
   const [errorValue, setErrorValue] = React.useState("");
