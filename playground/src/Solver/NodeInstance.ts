@@ -2,9 +2,14 @@ import { Solver } from "./Solver";
 import { Observable, BehaviorSubject, combineLatest } from "rxjs";
 import { map } from "rxjs/operators";
 import { Node, NOT_WALKED_YET, Refrence } from "./Analyzer/StructPropertyDependencyAnalyzer";
-import { AtomContext, PrimitiveExpressionContext, ExpressionContext } from "../Parser/ReactiveGrammerParser";
+import {
+  AtomContext,
+  PrimitiveExpressionContext,
+  ExpressionContext,
+  StructDefinitionContext
+} from "../Parser/ReactiveGrammerParser";
 import { isProperty } from "./Models";
-export type Instance = Observable<any>;
+export type Instance = Observable<any> | NodeInstance;
 
 type InstanceNodeTree = {
   instance: Instance | null;
@@ -27,22 +32,19 @@ export class NodeInstance {
   tree: InstanceNodeTree;
   constructor(node: Node, private solver: Solver) {
     this.tree = nodeToInstanceNodeTree(node);
-    this.init({
-      propIn: new BehaviorSubject<string>(":)")
-    });
   }
 
   init(initialValue: { [key: string]: Instance }) {
-    resolve(this.tree, initialValue);
+    resolve(this.tree, initialValue, this.solver);
   }
 }
 
-function resolve(tree: InstanceNodeTree, initialValue: { [key: string]: Instance }) {
+function resolve(tree: InstanceNodeTree, initialValue: { [key: string]: Instance }, solver: Solver) {
   // check if has an instance (resolved)
   if (tree.instance != null) return;
   // resolve dependecies if have any
   if (tree.dependecies.length > 0) {
-    tree.dependecies.forEach(dep => resolve(dep, initialValue));
+    tree.dependecies.forEach(dep => resolve(dep, initialValue, solver));
   }
   // create the instance
 
@@ -56,6 +58,7 @@ function resolve(tree: InstanceNodeTree, initialValue: { [key: string]: Instance
       const expr = expressions[0];
       // handle not
       if (expr.NOT()) {
+        if (instance instanceof NodeInstance) throw new Error("cannot use not operator for struct");
         instance = instance.pipe(map(x => !x));
       }
       // handle paran
@@ -72,6 +75,12 @@ function resolve(tree: InstanceNodeTree, initialValue: { [key: string]: Instance
         tree.instance = tree.dependecies[0].instance;
         return;
       }
+      if (
+        tree.dependecies[0].instance! instanceof NodeInstance ||
+        tree.dependecies[1].instance! instanceof NodeInstance
+      )
+        throw new Error("cannot use basic operators for struct");
+
       if (operator === "+") {
         tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
           map(([a, b]) => a + b)
@@ -137,7 +146,7 @@ function resolve(tree: InstanceNodeTree, initialValue: { [key: string]: Instance
   }
 
   // atom
-  handleAtom(source, tree);
+  handleAtom(source, tree, solver);
 }
 
 type CondValueExp = {
@@ -145,7 +154,7 @@ type CondValueExp = {
   value: any;
 };
 
-function handleAtom(source: Refrence["value"], tree: InstanceNodeTree): void {
+function handleAtom(source: Refrence["value"], tree: InstanceNodeTree, solver: Solver): void {
   // atom
   if (isAtomContext(source)) {
     // primitve
@@ -175,7 +184,12 @@ function handleAtom(source: Refrence["value"], tree: InstanceNodeTree): void {
     if (conditionalCtx != null) {
       const hasElseBranch = conditionalCtx.conditionalValueExpressionElseBranch().length > 0;
       if (tree.dependecies.length >= 2) {
-        tree.instance = combineLatest(tree.dependecies.map(x => x.instance!)).pipe(
+        tree.instance = combineLatest(
+          tree.dependecies.map(x => {
+            if (x.instance! instanceof NodeInstance) return new BehaviorSubject<NodeInstance>(x.instance!);
+            return x.instance!;
+          })
+        ).pipe(
           map(deps => {
             const trueBranch: CondValueExp = {
               condition: deps[0],
@@ -207,16 +221,44 @@ function handleAtom(source: Refrence["value"], tree: InstanceNodeTree): void {
         );
         return;
       } else if (tree.dependecies.length === 1) {
+        // TODO: check why i should check this?!
         tree.instance = tree.dependecies[0].instance;
+        return;
       }
     }
 
     // new struct expression
     const newStructCtx = source.newStructExpression();
     if (newStructCtx != null) {
-      
+      if (
+        tree.dependecies.length === 1 &&
+        tree.dependecies[0].instance !== null &&
+        tree.dependecies[0].instance! instanceof NodeInstance
+      ) {
+        // TODO: check why i should check this?!
+        // clue : it may because of nested expressions! same as the
+        // check in the atomExpression above
+        tree.instance = tree.dependecies[0].instance!;
+        return;
+      } else {
+        const structName = newStructCtx.refrenceName().text;
+        const struct = solver.instantiateStruct(structName) as NodeInstance;
+        // collect parameters
+        let params: { [key: string]: Instance } = {};
+        let paramNames: string[];
+        const paramBody = newStructCtx.parameters().parameterBody();
+        if (paramBody != null) {
+          // TODO: optimize this:
+          paramNames = paramBody.text.split(",").map(x => x.split(":")[0]);
+        }
+        tree.dependecies.forEach((dep, i) => {
+          params[paramNames[i]] = dep.instance!;
+        });
+        struct.init(params);
+        tree.instance = struct;
+        return;
+      }
     }
-
   }
 
   // expression atom
@@ -224,7 +266,8 @@ function handleAtom(source: Refrence["value"], tree: InstanceNodeTree): void {
     // if has single atom just check for prefix + or -
     const atom = source.atom();
     if (atom != null) {
-      handleAtom(atom, tree);
+      handleAtom(atom, tree, solver);
+      return;
     }
   }
 

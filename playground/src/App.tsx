@@ -16,18 +16,23 @@ import { ReactiveGrammerListener } from "./Parser/ReactiveGrammerListener";
 import { Solver } from "./Solver/Solver";
 import { StructDependencyAnalyzer } from "./Solver/Analyzer/StructDependencyAnalyzer";
 import { StructPropertyDependencyAnalyzer } from "./Solver/Analyzer/StructPropertyDependencyAnalyzer";
+import { NodeInstance } from "./Solver/NodeInstance";
+import { BehaviorSubject } from "rxjs";
 const example = `
 struct ($this Test) {
   propIn: Core:String
   prop1: Core:String default ("Hi !" + $this.propIn)
-  prop2: Core:String default ("test" + ($lbl $this.prop1) + "test" + $this.prop1 + $this.prop3)
-  prop3: Core:Number default ((
-    if (true)
-        1
-    else
-        2
-  ))
-}`;
+  prop2: Core:String default ("test" + ($lbl $this.prop1) + "test" + $this.prop1)
+  prop3: Core:Number default (
+    Dep(propDepIn: $this.prop1)
+  )
+}
+
+struct ($this Dep) {
+  propDep1: Core:String default ("from input:" + $this.propDepIn)
+  propDepIn: Core:String
+}
+`;
 const App: React.FC = () => {
   const [logValue, setLogValue] = React.useState("");
   const [errorValue, setErrorValue] = React.useState("");
@@ -127,7 +132,17 @@ ${e}
         <div style={{ display: "flex", flexDirection: "row", flexWrap: "wrap", justifyContent: "center" }}>
           {solver != null &&
             solver.getStructFullNames().map((structFullName, i) => (
-              <button onClick={() => console.log(solver.instantiateStruct(structFullName))} key={i}>
+              <button
+                onClick={() => {
+                  const _nodeInstance = solver.instantiateStruct(structFullName) as NodeInstance;
+                  _nodeInstance.init({
+                    propIn: new BehaviorSubject<string>("propInValue")
+                  });
+                  logInstance(_nodeInstance);
+                  console.log(_nodeInstance);
+                }}
+                key={i}
+              >
                 {structFullName}
               </button>
             ))}
@@ -136,5 +151,16 @@ ${e}
     </div>
   );
 };
+
+function logInstance(node: NodeInstance) {
+  node.tree.dependecies
+    .forEach((x, i) => {
+      if (x.instance instanceof NodeInstance) {
+        logInstance(x.instance!);
+      } else {
+        x.instance!.subscribe(p => console.log(i, (x.node.refrence.value as any).name, p));
+      }
+    });
+}
 
 export default App;

@@ -60,13 +60,12 @@ export class Solver {
     return this.structs.map(x => getStructFullName(x));
   }
 
-  instantiateStruct(fullName: string, defaultValue: any = null): NodeInstance | Instance {
+  instantiateStruct(fullName: string, defaultValue: any = null): Instance {
     let instance = this.tryInstantiateCoreTypes(fullName);
     if (instance) return instance;
     const struct = getStructFromFullname(fullName, this.root);
     const node = new StructPropertyDependencyAnalyzer(struct);
     let _nodeInstance = new NodeInstance(node.rootNode, this);
-    _nodeInstance.tree.dependecies.forEach((x, i) => x.instance!.subscribe(p => console.log(i, p)));
     return _nodeInstance;
   }
 

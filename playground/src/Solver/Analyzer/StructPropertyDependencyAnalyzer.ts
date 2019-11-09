@@ -215,6 +215,22 @@ function atomToNode(atom: AtomContext): Node {
     });
   }
 
+  const newStructCtx = atom.newStructExpression();
+  if (newStructCtx != null) {
+    const parBody = newStructCtx.parameters().parameterBody();
+    if (parBody != null) {
+      parBody.expression().forEach(exp => {
+        dependencies.push({
+          dependencies: expressionToNode(exp),
+          refrence: {
+            isRaw: false,
+            value: exp
+          }
+        });
+      });
+    }
+  }
+
   return {
     dependencies: dependencies,
     refrence: {
