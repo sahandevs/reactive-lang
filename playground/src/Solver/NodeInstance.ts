@@ -5,8 +5,7 @@ import { Node, NOT_WALKED_YET, Refrence } from "./Analyzer/StructPropertyDepende
 import {
   AtomContext,
   PrimitiveExpressionContext,
-  ExpressionContext,
-  StructDefinitionContext
+  ExpressionContext
 } from "../Parser/ReactiveGrammerParser";
 import { isProperty } from "./Models";
 export type Instance = Observable<any> | NodeInstance;
