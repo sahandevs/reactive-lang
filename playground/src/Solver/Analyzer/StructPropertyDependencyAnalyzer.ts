@@ -1,5 +1,4 @@
 import { Struct, Property, isStruct, isProperty } from "../Models";
-import { flattenNestedAtomExpression } from "./Utils";
 import {
   ExpressionContext,
   AtomContext,
