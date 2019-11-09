@@ -26,6 +26,12 @@ struct ($this Test) {
   prop3: Core:Number default (
     Dep(propDepIn: $this.prop1)
   )
+  hi: Any default (
+    if ($this.prop1 == "Hi !propInValue")
+        "Hi !"
+    else
+        "Hello"
+  )
 }
 
 struct ($this Dep) {
