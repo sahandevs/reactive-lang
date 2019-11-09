@@ -1,6 +1,5 @@
-import { Namespace, Struct, Property, NodeTypes, isStruct, isProperty } from "../Models";
-import { flatStructsFromNamespace } from "../Solver";
-import { getAllNewStructCalls, flattenNestedAtomExpression } from "./Utils";
+import { Struct, Property, isStruct, isProperty } from "../Models";
+import { flattenNestedAtomExpression } from "./Utils";
 import { ExpressionContext, AtomContext, RefrenceExpressionContext } from "../../Parser/ReactiveGrammerParser";
 type ResolvedRefrence = Struct | Property | ExpressionContext | AtomContext | Node;
 type RawRefrence = RefrenceExpressionContext;

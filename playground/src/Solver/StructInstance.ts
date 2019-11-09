@@ -1,17 +1,12 @@
 import { Struct, Property } from "./Models";
-import { Observable, BehaviorSubject, isObservable } from "rxjs";
+import { Observable } from "rxjs";
 import { getStructFullName, Solver } from "./Solver";
 import {
-  PropertyDefaultOptionContext,
   ExpressionContext,
   AtomContext,
   RefrenceExpressionContext,
   LabelRefrenceMemberAccessExpressionContext
 } from "../Parser/ReactiveGrammerParser";
-
-function isSubject(value: any): value is BehaviorSubject<any> {
-  return typeof value.next === "function" && isObservable(value);
-}
 
 export type Instance = Observable<any> | StructInstance;
 
