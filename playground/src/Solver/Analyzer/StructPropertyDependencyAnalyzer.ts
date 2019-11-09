@@ -51,7 +51,6 @@ export class StructPropertyDependencyAnalyzer {
     });
     this.resolveNodeDependencies(this.rootNode);
     this.resolveRawRefrences(this.rootNode);
-    console.log(checkCircularDependencies(this.rootNode, [], []));
     console.log(this.rootNode);
   }
 
@@ -223,20 +222,4 @@ function resolveRawRefrences(node: Node, labelCache: { [key: string]: Node }) {
   if (node.dependencies !== NOT_WALKED_YET) {
     node.dependencies.forEach(n => resolveRawRefrences(n, labelCache));
   }
-}
-
-function checkCircularDependencies(node: Node, resolved: Node[], seen: Node[]): string | null {
-  seen.push(node);
-  if (node.dependencies !== NOT_WALKED_YET) {
-    node.dependencies.forEach(dep => {
-      if (!resolved.includes(dep)) {
-        if (seen.includes(dep)) {
-          return "Circular dependency found ";
-        }
-        checkCircularDependencies(dep, resolved, seen);
-      }
-    });
-  }
-  resolved.push(node);
-  return null;
 }
