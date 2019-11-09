@@ -210,6 +210,13 @@ function handleAtom(source: Refrence["value"], tree: InstanceNodeTree): void {
         tree.instance = tree.dependecies[0].instance;
       }
     }
+
+    // new struct expression
+    const newStructCtx = source.newStructExpression();
+    if (newStructCtx != null) {
+      
+    }
+
   }
 
   // expression atom
@@ -217,7 +224,7 @@ function handleAtom(source: Refrence["value"], tree: InstanceNodeTree): void {
     // if has single atom just check for prefix + or -
     const atom = source.atom();
     if (atom != null) {
-      return handleAtom(atom, tree);
+      handleAtom(atom, tree);
     }
   }
 
