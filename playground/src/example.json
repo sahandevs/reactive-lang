@@ -1,5 +1,6 @@
 {
   "example1": "namespace Namespace1 {\n        struct SI {}\n        namespace NameSpace2 {\n            struct SII {}\n        }\n    }\nstruct SOO {}",
   "example2": "struct Test {\n  prop1: Core:String\n  prop2: Core:String default (\"\")\n}",
-  "example3": "struct ($this Test) {\n  prop1: Core:String default (\"Hi !\")\n  prop2: Core:String default (\"test\" + ($lbl $this.prop1))\n}"
+  "example3": "struct ($this Test) {\n  prop1: Core:String default (\"Hi !\")\n  prop2: Core:String default (\"test\" + ($lbl $this.prop1))\n}",
+  "example4": "struct ($this Test) {\n  propIn: Core:String\n  prop1: Core:String default (\"Hi !\" + $this.propIn)\n  prop2: Core:String default (\"test\" + ($lbl $this.prop1) + \"test\" + $this.prop1 + $this.prop3)\n  prop3: Core:Number default (\"(\" + $this.prop1 + \")\")\n}"
 }

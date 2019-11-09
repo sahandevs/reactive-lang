@@ -3,7 +3,7 @@ import { Observable, BehaviorSubject, combineLatest } from "rxjs";
 import { map } from "rxjs/operators";
 import { Node, NOT_WALKED_YET, Refrence } from "./Analyzer/StructPropertyDependencyAnalyzer";
 import { AtomContext, PrimitiveExpressionContext, ExpressionContext } from "../Parser/ReactiveGrammerParser";
-import { isProperty } from "@babel/types";
+import { isProperty } from "./Models";
 export type Instance = Observable<any>;
 
 type InstanceNodeTree = {
@@ -27,20 +27,22 @@ export class NodeInstance {
   tree: InstanceNodeTree;
   constructor(node: Node, private solver: Solver) {
     this.tree = nodeToInstanceNodeTree(node);
-    this.init({});
+    this.init({
+      propIn: new BehaviorSubject<string>(":)")
+    });
   }
 
-  init(initialValue: { [key: string]: NodeInstance }) {
-    resolve(this.tree);
+  init(initialValue: { [key: string]: Instance }) {
+    resolve(this.tree, initialValue);
   }
 }
 
-function resolve(tree: InstanceNodeTree) {
+function resolve(tree: InstanceNodeTree, initialValue: { [key: string]: Instance }) {
   // check if has an instance (resolved)
   if (tree.instance != null) return;
   // resolve dependecies if have any
   if (tree.dependecies.length > 0) {
-    tree.dependecies.forEach(dep => resolve(dep));
+    tree.dependecies.forEach(dep => resolve(dep, initialValue));
   }
   // create the instance
 
@@ -90,7 +92,14 @@ function resolve(tree: InstanceNodeTree) {
   // property
 
   if (isProperty(source)) {
-    tree.instance = tree.dependecies[0].instance!;
+    if (source.defaultOption == null) {
+      const name = source.name;
+      const value = initialValue[name];
+      if (value == null) throw new Error(name + " is required");
+      tree.instance = value;
+    } else {
+      tree.instance = tree.dependecies[0].instance!;
+    }
   }
 }
 

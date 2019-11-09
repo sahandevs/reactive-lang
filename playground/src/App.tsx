@@ -9,7 +9,7 @@ import "./ACEReactiveMode";
 import "ace-builds/src-noconflict/theme-dracula";
 import "ace-builds/src-noconflict/ext-searchbox";
 import "ace-builds/src-noconflict/ext-prompt";
-import { example3 as example } from "./example.json";
+import { example4 as example } from "./example.json";
 import { ReactiveListener } from "./Solver/Listener";
 import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
 import { ReactiveGrammerListener } from "./Parser/ReactiveGrammerListener";
