@@ -98,68 +98,41 @@ export class StructPropertyDependencyAnalyzer {
 }
 
 function expressionToNode(ctx: ExpressionContext): Node[] {
+  // if atom
+  const atomExp = ctx.atom();
+  if (atomExp) {
+    let node = atomToNode(atomExp);
+    return [
+      {
+        dependencies: [node],
+        refrence: {
+          isRaw: false,
+          value: atomExp
+        }
+      }
+    ];
+  }
+
   let expressions = ctx.expression();
-  expressions = expressions.length === 0 ? [ctx] : expressions;
   let label = ctx.LABEL_NAME() == null ? undefined : ctx.LABEL_NAME()!.text;
-  // is multi expression or not ?
-  if (expressions.length > 1) {
-    return [
-      {
-        dependencies: expressions.map(exp => {
-          return {
-            dependencies: expressionToNode(exp),
-            refrence: {
-              isRaw: false,
-              value: exp
-            }
-          };
-        }),
-        refrence: {
-          isRaw: false,
-          value: ctx,
-          label: label
-        }
-      }
-    ];
-  } else if (expressions.length === 1 && expressions[0].childCount > 1) {
-    return [
-      {
-        dependencies: expressions[0].expression().map(exp => {
-          return {
-            dependencies: expressionToNode(exp),
-            refrence: {
-              isRaw: false,
-              value: exp
-            }
-          };
-        }),
-        refrence: {
-          isRaw: false,
-          value: ctx,
-          label: label
-        }
-      }
-    ];
-  } else {
-    let expression: ExpressionContext = expressions[0];
-    if (expression == null) return [];
-    // is atom?
-    const atomExp = expression.atom() as AtomContext;
-    if (atomExp) {
-      let node = atomToNode(atomExp);
-      return [
-        {
-          dependencies: [node],
+  return [
+    {
+      dependencies: expressions.map(exp => {
+        return {
+          dependencies: expressionToNode(exp),
           refrence: {
             isRaw: false,
-            value: expression,
-            label: label
+            value: exp
           }
-        }
-      ];
+        };
+      }),
+      refrence: {
+        isRaw: false,
+        value: ctx,
+        label: label
+      }
     }
-  }
-  return [];
+  ];
 }
 
 function atomToNode(atom: AtomContext): Node {
