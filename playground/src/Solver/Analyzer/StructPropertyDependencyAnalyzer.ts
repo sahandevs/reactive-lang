@@ -149,18 +149,67 @@ function atomToNode(atom: AtomContext): Node {
   }
   // else
 
+  // dependencies
+  let dependencies: Node[] = [];
+
+  const conditionalCtx = atom.conditionalValueExpression();
+  if (conditionalCtx != null) {
+    // true branch
+    const true_ = conditionalCtx.conditionalValueExpressionTrueBranch();
+    const trueCond = true_.expression(0)!;
+    const trueResult = true_.expression(1)!;
+    dependencies.push({
+      dependencies: expressionToNode(trueCond),
+      refrence: {
+        isRaw: false,
+        value: trueCond
+      }
+    });
+    dependencies.push({
+      dependencies: expressionToNode(trueResult),
+      refrence: {
+        isRaw: false,
+        value: trueResult
+      }
+    });
+    // else branches
+    [
+      ...conditionalCtx.conditionalValueExpressionElseIfBranch(),
+      ...conditionalCtx.conditionalValueExpressionElseBranch()
+    ].forEach(exp => {
+      const cond = exp.expression(0)!;
+      const result = exp.expression(1)!;
+      dependencies.push({
+        dependencies: expressionToNode(cond),
+        refrence: {
+          isRaw: false,
+          value: cond
+        }
+      });
+      dependencies.push({
+        dependencies: expressionToNode(result),
+        refrence: {
+          isRaw: false,
+          value: result
+        }
+      });
+    });
+  }
+
+  const listCtx = atom.arrayExpression();
+  if (listCtx != null) {
+    // TODO: add support for list
+    throw new Error("arrays not supported yet!");
+  }
+
+  const namedCollectionCtx = atom.namedCollectionExpression();
+  if (namedCollectionCtx != null) {
+    // TODO: add support for dictionary
+    throw new Error("dicts not supported yet!");
+  }
+
   return {
-    dependencies: flattenNestedAtomExpression(atom)
-      .filter(x => x !== atom)
-      .map(a => {
-        return {
-          dependencies: [atomToNode(a)],
-          refrence: {
-            isRaw: false,
-            value: a
-          }
-        };
-      }),
+    dependencies: dependencies,
     refrence: {
       isRaw: false,
       value: atom
