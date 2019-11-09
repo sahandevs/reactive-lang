@@ -1,6 +1,11 @@
 import { Struct, Property, isStruct, isProperty } from "../Models";
 import { flattenNestedAtomExpression } from "./Utils";
-import { ExpressionContext, AtomContext, RefrenceExpressionContext } from "../../Parser/ReactiveGrammerParser";
+import {
+  ExpressionContext,
+  AtomContext,
+  RefrenceExpressionContext,
+  LabelRefrenceMemberAccessExpressionContext
+} from "../../Parser/ReactiveGrammerParser";
 type ResolvedRefrence = Struct | Property | ExpressionContext | AtomContext | Node;
 type RawRefrence = RefrenceExpressionContext;
 const NOT_WALKED_YET = "NOT_WALKED_YET";
@@ -15,7 +20,7 @@ interface Node {
   refrence: Refrence;
 }
 
-function isNode(value: any): value is Node {
+export function isNode(value: any): value is Node {
   return value.refrence != null && typeof value.refrence.isRaw === "boolean";
 }
 
@@ -71,7 +76,11 @@ export class StructPropertyDependencyAnalyzer {
   resolveRawRefrences(node: Node) {
     // cache labels
     let labelToNode: { [key: string]: Node } = getAllLabelsFromNode(node);
-    resolveRawRefrences(node, labelToNode);
+    try {
+      resolveRawRefrences(node, labelToNode);
+    } catch (e) {
+      throw new Error("Circular dependency detected!");
+    }
   }
 
   private handleRRefNode(node: Node) {
@@ -189,14 +198,27 @@ function getAllLabelsFromNode(node: Node): { [key: string]: Node } {
 function resolveRawRefrences(node: Node, labelCache: { [key: string]: Node }) {
   if (node.refrence.isRaw) {
     let refExp = (node.refrence.value as any).refrenceExpression();
-    let ref = refExp.labelRefrenceMemberAccessExpression()!;
+    let ref = refExp.labelRefrenceMemberAccessExpression()! as LabelRefrenceMemberAccessExpressionContext;
     const labelName = ref.LABEL_NAME().text;
-    const targetNode = labelCache[labelName];
+    const member = ref.IDENTIFIER().map(x => x.text)[0];
+    let targetNode = labelCache[labelName];
     if (targetNode == null) {
       throw new Error("cannot resolve label " + labelName);
     }
+    if (member !== "self") {
+      if (isStruct(targetNode.refrence.value) && targetNode.dependencies !== NOT_WALKED_YET) {
+        const targetProperty = targetNode.dependencies.find(x => (x.refrence.value as Property).name === member);
+        if (targetProperty != null) {
+          targetNode = targetProperty;
+        } else {
+          throw new Error("cannot resolve property " + ref.text);
+        }
+      } else {
+        throw new Error("Node not supported yet!");
+      }
+    }
     node.refrence.isRaw = false;
-    node.refrence.value = targetNode;
+    node.dependencies = [targetNode];
   }
   if (node.dependencies !== NOT_WALKED_YET) {
     node.dependencies.forEach(n => resolveRawRefrences(n, labelCache));
@@ -206,11 +228,7 @@ function resolveRawRefrences(node: Node, labelCache: { [key: string]: Node }) {
 function checkCircularDependencies(node: Node, resolved: Node[], seen: Node[]): string | null {
   seen.push(node);
   if (node.dependencies !== NOT_WALKED_YET) {
-    let deps = [...node.dependencies];
-    if (isNode(node.refrence.value)) {
-      deps.push(node.refrence.value);
-    }
-    deps.forEach(dep => {
+    node.dependencies.forEach(dep => {
       if (!resolved.includes(dep)) {
         if (seen.includes(dep)) {
           return "Circular dependency found ";
