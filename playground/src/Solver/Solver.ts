@@ -65,7 +65,9 @@ export class Solver {
     if (instance) return instance;
     const struct = getStructFromFullname(fullName, this.root);
     const node = new StructPropertyDependencyAnalyzer(struct);
-    return new NodeInstance(node.rootNode, this);
+    let _nodeInstance = new NodeInstance(node.rootNode, this);
+    _nodeInstance.tree.dependecies.forEach((x, i) => x.instance!.subscribe(p => console.log(i, p)));
+    return _nodeInstance;
   }
 
   tryInstantiateCoreTypes(fullName: string, isVar: boolean = false, defaultValue: any = null): Observable<any> | null {

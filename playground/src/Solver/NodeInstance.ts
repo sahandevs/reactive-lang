@@ -82,6 +82,42 @@ function resolve(tree: InstanceNodeTree, initialValue: { [key: string]: Instance
         tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
           map(([a, b]) => a - b)
         );
+      } else if (operator === "*") {
+        tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
+          map(([a, b]) => a * b)
+        );
+      } else if (operator === "/") {
+        tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
+          map(([a, b]) => a / b)
+        );
+      } else if (operator === "-") {
+        tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
+          map(([a, b]) => a - b)
+        );
+      } else if (operator === ">") {
+        tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
+          map(([a, b]) => a > b)
+        );
+      } else if (operator === ">=") {
+        tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
+          map(([a, b]) => a >= b)
+        );
+      } else if (operator === "<") {
+        tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
+          map(([a, b]) => a < b)
+        );
+      } else if (operator === "<=") {
+        tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
+          map(([a, b]) => a <= b)
+        );
+      } else if (operator === "or") {
+        tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
+          map(([a, b]) => a || b)
+        );
+      } else if (operator === "and") {
+        tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
+          map(([a, b]) => a && b)
+        );
       } else {
         throw new Error("operator " + operator + " not supported yet!");
       }
@@ -126,6 +162,8 @@ function handleAtom(source: Refrence["value"], tree: InstanceNodeTree): boolean 
         throw new Error("this type of refrence is not supported yet!");
       }
     }
+
+    //
   }
 
   // expression atom
