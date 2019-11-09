@@ -3,9 +3,10 @@ import {
   ExpressionContext,
   AtomContext,
   RefrenceExpressionContext,
-  LabelRefrenceMemberAccessExpressionContext
+  LabelRefrenceMemberAccessExpressionContext,
+  NamedCollectionMemberContext
 } from "../../Parser/ReactiveGrammerParser";
-type ResolvedRefrence = Struct | Property | ExpressionContext | AtomContext | Node;
+type ResolvedRefrence = Struct | Property | ExpressionContext | AtomContext | Node | NamedCollectionMemberContext;
 type RawRefrence = RefrenceExpressionContext;
 export const NOT_WALKED_YET = "NOT_WALKED_YET";
 export type Refrence = {
@@ -203,8 +204,15 @@ function atomToNode(atom: AtomContext): Node {
 
   const namedCollectionCtx = atom.namedCollectionExpression();
   if (namedCollectionCtx != null) {
-    // TODO: add support for dictionary
-    throw new Error("dicts not supported yet!");
+    namedCollectionCtx.namedCollectionMember().forEach(member => {
+      dependencies.push({
+        dependencies: expressionToNode(member.expression()),
+        refrence: {
+          isRaw: false,
+          value: member
+        }
+      });
+    });
   }
 
   return {
