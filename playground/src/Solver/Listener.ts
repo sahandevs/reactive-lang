@@ -1,7 +1,7 @@
 import * as C from "../Parser/ReactiveGrammerParser";
 import { ReactiveGrammerListener } from "../Parser/ReactiveGrammerListener";
 import { describeNamespaceTree } from "./Utils";
-import { Namespace, Struct, NodeTypes, Property } from "./Models";
+import { Namespace, Struct, NodeTypes, Property, NameDefinition } from "./Models";
 import { Solver } from "./Solver";
 
 export class ReactiveListener implements ReactiveGrammerListener {
@@ -13,7 +13,8 @@ export class ReactiveListener implements ReactiveGrammerListener {
       type: NodeTypes.NameSpace,
       name: "root",
       children: [],
-      parent: null
+      parent: null,
+      names: []
     };
     this.currentNamespace = this.rootNamespace;
   }
@@ -23,7 +24,8 @@ export class ReactiveListener implements ReactiveGrammerListener {
       type: NodeTypes.NameSpace,
       name: "root",
       children: [],
-      parent: null
+      parent: null,
+      names: []
     };
     this.currentNamespace = this.rootNamespace;
   }
@@ -33,7 +35,8 @@ export class ReactiveListener implements ReactiveGrammerListener {
       type: NodeTypes.NameSpace,
       name: ctx.IDENTIFIER().text,
       children: [],
-      parent: this.currentNamespace
+      parent: this.currentNamespace,
+      names: []
     };
     this.currentNamespace.children.push(namespace);
     this.currentNamespace = namespace;
@@ -51,6 +54,7 @@ export class ReactiveListener implements ReactiveGrammerListener {
       name: ctx.labelableIdentifier().IDENTIFIER().text,
       parent: this.currentNamespace,
       properties: [],
+      names: [],
       context: ctx
     };
     this.currentNamespace.children.push(struct);
@@ -59,6 +63,17 @@ export class ReactiveListener implements ReactiveGrammerListener {
 
   exitStructDefinition() {
     this.currentStruct = null;
+  }
+
+  enterNameDefinition(ctx: C.NameDefinitionContext) {
+    const name: NameDefinition = {
+      context: ctx
+    };
+    if (this.currentStruct != null) {
+      this.currentStruct.names.push(name);
+    } else {
+      this.currentNamespace.names.push(name);
+    }
   }
 
   enterPropertyDefinition(ctx: C.PropertyDefinitionContext) {

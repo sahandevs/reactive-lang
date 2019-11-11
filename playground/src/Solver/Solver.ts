@@ -1,4 +1,4 @@
-import { Namespace, Struct, isNamespace, isStruct } from "./Models";
+import { Namespace, Struct, isNamespace, isStruct, NameDefinition } from "./Models";
 import { NodeInstance, Instance } from "./NodeInstance";
 import { Observable, BehaviorSubject } from "rxjs";
 import { StructPropertyDependencyAnalyzer } from "./Analyzer/StructPropertyDependencyAnalyzer";
@@ -44,11 +44,17 @@ function getStructFromFullname(fullname: string, namespace: Namespace): Struct {
   }
 }
 
+class Name {
+  constructor(private definition: NameDefinition, private parent: Namespace | Struct) {}
+}
+
 export class Solver {
   private structs: Struct[];
+  private names: Name[];
 
   constructor(public root: Namespace) {
     this.structs = flatStructsFromNamespace(root);
+    this.names = [];
     // analyzer
   }
 

@@ -1,4 +1,4 @@
-import { PropertyDefaultOptionContext, StructDefinitionContext } from "../Parser/ReactiveGrammerParser";
+import { PropertyDefaultOptionContext, StructDefinitionContext, NameDefinitionContext } from "../Parser/ReactiveGrammerParser";
 
 export type Identifier = string;
 
@@ -6,6 +6,7 @@ export interface Namespace {
   type: NodeTypes.NameSpace;
   name: Identifier;
   parent: Namespace | null;
+  names: NameDefinition[];
   children: (Struct | Namespace)[];
 }
 
@@ -13,11 +14,16 @@ export interface TypeName {
   name: String;
 }
 
+export interface NameDefinition {
+  context: NameDefinitionContext
+}
+
 export interface Struct {
   type: NodeTypes.Struct;
   name: Identifier;
   parent: Namespace;
   properties: Property[];
+  names: NameDefinition[];
   context: StructDefinitionContext;
 }
 
