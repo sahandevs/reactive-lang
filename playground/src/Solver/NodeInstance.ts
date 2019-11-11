@@ -30,16 +30,16 @@ export class NodeInstance {
   }
 
   init(initialValue: { [key: string]: Instance }) {
-
-    // resolve overrides
+    // handle property default overrides
     this.tree.dependecies.forEach(dep => {
       if (isProperty(dep.node.refrence.value)) {
         const name = dep.node.refrence.value.name;
         const value = initialValue[name];
         if (value == null) return;
+        if (dep.node.refrence.value.readonly) throw new Error("Readonly properties default value cannot be overridden");
         dep.instance = value;
       }
-    })
+    });
 
     resolve(this.tree, initialValue, this.solver);
   }

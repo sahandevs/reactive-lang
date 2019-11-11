@@ -32,6 +32,7 @@ export interface Property {
   typeName: TypeName;
   parent: Struct;
   defaultOption: PropertyDefaultOption | null;
+  readonly: boolean
 }
 
 export enum NodeTypes {

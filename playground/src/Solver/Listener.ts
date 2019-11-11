@@ -63,8 +63,12 @@ export class ReactiveListener implements ReactiveGrammerListener {
 
   enterPropertyDefinition(ctx: C.PropertyDefinitionContext) {
     let propertyDefaultOptionContext: C.PropertyDefaultOptionContext | null = null;
+    let readonly: boolean = false;
     ctx.propertyOptions().forEach(option => {
       propertyDefaultOptionContext = option.propertyDefaultOption()!;
+      if (option.propertyReadonlyOption() != null) {
+        readonly = true;
+      }
     });
 
     const property: Property = {
@@ -80,7 +84,8 @@ export class ReactiveListener implements ReactiveGrammerListener {
           : {
               context: propertyDefaultOptionContext,
               isVar: propertyDefaultOptionContext!.VAR() != null
-            }
+            },
+      readonly: readonly
     };
     this.currentStruct!.properties.push(property);
   }
