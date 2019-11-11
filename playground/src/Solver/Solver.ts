@@ -1,4 +1,4 @@
-import { Namespace, Struct, isNamespace, isStruct, NameDefinition } from "./Models";
+import { Namespace, Struct, isNamespace, isStruct } from "./Models";
 import { NodeInstance, Instance, NameInstance } from "./NodeInstance";
 import { Observable, BehaviorSubject } from "rxjs";
 import { StructPropertyDependencyAnalyzer } from "./Analyzer/StructPropertyDependencyAnalyzer";
