@@ -3,7 +3,7 @@ import { Observable, BehaviorSubject, combineLatest } from "rxjs";
 import { map } from "rxjs/operators";
 import { Node, NOT_WALKED_YET, Refrence } from "./Analyzer/StructPropertyDependencyAnalyzer";
 import { AtomContext, PrimitiveExpressionContext, ExpressionContext } from "../Parser/ReactiveGrammerParser";
-import { isProperty } from "./Models";
+import { isProperty, NameDefinition, Namespace, Struct } from "./Models";
 export type Instance = Observable<any> | NodeInstance;
 
 type InstanceNodeTree = {
@@ -23,13 +23,25 @@ export function nodeToInstanceNodeTree(node: Node): InstanceNodeTree {
   };
 }
 
+export class NameInstance {
+  constructor(private definition: NameDefinition, private parent: Namespace | Struct) {}
+}
+
 export class NodeInstance {
   tree: InstanceNodeTree;
+  names: NameInstance[];
   constructor(node: Node, private solver: Solver) {
     this.tree = nodeToInstanceNodeTree(node);
+    this.names = [];
+  }
+
+  getName(name: string) {
+    // if is refrence => find in NodeInstance
+    // else find in globalNames from solver
   }
 
   init(initialValue: { [key: string]: Instance }) {
+    // TODO: resolve names
     // handle property default overrides
     this.tree.dependecies.forEach(dep => {
       if (isProperty(dep.node.refrence.value)) {
