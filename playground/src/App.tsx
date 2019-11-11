@@ -24,7 +24,7 @@ struct ($this Test) {
   prop1: Core:String default ("Hi !" + $this.propIn)
   prop2: Core:String default ("test" + ($lbl $this.prop1) + "test" + $this.prop1)
   prop3: Core:Number default (
-    Dep(propDepIn: $this.prop1)
+    Dep(propDepIn: $this.prop1, propDep1: "[Override test]")
   )
   hi: Any default (
     if ($this.prop1 == "Hi !propInValue")

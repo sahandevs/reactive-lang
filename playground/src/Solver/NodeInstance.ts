@@ -30,6 +30,17 @@ export class NodeInstance {
   }
 
   init(initialValue: { [key: string]: Instance }) {
+
+    // resolve overrides
+    this.tree.dependecies.forEach(dep => {
+      if (isProperty(dep.node.refrence.value)) {
+        const name = dep.node.refrence.value.name;
+        const value = initialValue[name];
+        if (value == null) return;
+        dep.instance = value;
+      }
+    })
+
     resolve(this.tree, initialValue, this.solver);
   }
 }
