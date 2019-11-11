@@ -2,8 +2,14 @@ import { Solver } from "./Solver";
 import { Observable, BehaviorSubject, combineLatest } from "rxjs";
 import { map } from "rxjs/operators";
 import { Node, NOT_WALKED_YET, Refrence } from "./Analyzer/StructPropertyDependencyAnalyzer";
-import { AtomContext, PrimitiveExpressionContext, ExpressionContext } from "../Parser/ReactiveGrammerParser";
-import { isProperty, NameDefinition, Namespace, Struct } from "./Models";
+import {
+  AtomContext,
+  PrimitiveExpressionContext,
+  ExpressionContext,
+  RefrenceNameContext,
+  LabelRefrenceMemberAccessExpressionContext
+} from "../Parser/ReactiveGrammerParser";
+import { isProperty, NameDefinition, Namespace, Struct, isStruct } from "./Models";
 export type Instance = Observable<any> | NodeInstance;
 
 type InstanceNodeTree = {
@@ -27,17 +33,27 @@ export class NameInstance {
   constructor(private definition: NameDefinition, private parent: Namespace | Struct) {}
 }
 
+function createNameInstancesFromNode(node: Node): NameInstance[] {
+  if (!isStruct(node.refrence.value)) return [];
+  return node.refrence.value.names.map(name => new NameInstance(name, node.refrence.value as Struct));
+}
+
 export class NodeInstance {
   tree: InstanceNodeTree;
   names: NameInstance[];
   constructor(node: Node, private solver: Solver) {
     this.tree = nodeToInstanceNodeTree(node);
-    this.names = [];
+    this.names = createNameInstancesFromNode(node);
   }
 
-  getName(name: string) {
-    // if is refrence => find in NodeInstance
-    // else find in globalNames from solver
+  getName(name: RefrenceNameContext | LabelRefrenceMemberAccessExpressionContext): NameInstance {
+    // if is LabelRefrenceMemberAccessExpressionContext => find in NodeInstance
+    if (name instanceof LabelRefrenceMemberAccessExpressionContext) {
+      throw new Error("not implemented yet");
+    } else {
+      // else if is RefrenceNameContext find in globalNames from solver
+      return this.solver.getName(name);
+    }
   }
 
   init(initialValue: { [key: string]: Instance }) {

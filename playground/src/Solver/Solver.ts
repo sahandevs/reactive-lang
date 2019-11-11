@@ -2,6 +2,7 @@ import { Namespace, Struct, isNamespace, isStruct } from "./Models";
 import { NodeInstance, Instance, NameInstance } from "./NodeInstance";
 import { Observable, BehaviorSubject } from "rxjs";
 import { StructPropertyDependencyAnalyzer } from "./Analyzer/StructPropertyDependencyAnalyzer";
+import { RefrenceNameContext } from "../Parser/ReactiveGrammerParser";
 
 export interface Application {
   root: Namespace;
@@ -44,14 +45,31 @@ function getStructFromFullname(fullname: string, namespace: Namespace): Struct {
   }
 }
 
+function createNameInstancesFromNamespace(node: Namespace): NameInstance[] {
+  let names: NameInstance[] = [];
+  node.names.forEach(name => {
+    names.push(new NameInstance(name, node));
+  });
+  node.children.forEach(child => {
+    if (isNamespace(child)) {
+      names = [...names, ...createNameInstancesFromNamespace(child)];
+    }
+  })
+  return names;
+}
+
 export class Solver {
   private structs: Struct[];
   private globalNames: NameInstance[];
 
   constructor(public root: Namespace) {
     this.structs = flatStructsFromNamespace(root);
-    this.globalNames = [];
+    this.globalNames = createNameInstancesFromNamespace(root);
     // analyzer
+  }
+
+  getName(name: RefrenceNameContext): NameInstance {
+    throw new Error("not implemented");
   }
 
   getStructByName(name: string): Struct {
