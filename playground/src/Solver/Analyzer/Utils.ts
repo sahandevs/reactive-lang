@@ -1,7 +1,7 @@
 import { ExpressionContext, AtomContext } from "../../Parser/ReactiveGrammerParser";
 
 import { Struct } from "../Models";
-import { Observable, Observer, Subscription } from "rxjs";
+import { Observable, Subscription } from "rxjs";
 
 function createArray(length: number): any[] {
   let items: any[] = [];

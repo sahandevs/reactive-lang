@@ -1,6 +1,6 @@
 import { Solver } from "./Solver";
-import { Observable, BehaviorSubject, combineLatest, merge, isObservable, from, of } from "rxjs";
-import { map, flatMap, combineLatest as oCombineLatest, switchMap, exhaustMap, mergeAll } from "rxjs/operators";
+import { Observable, BehaviorSubject, combineLatest, isObservable} from "rxjs";
+import { map, flatMap } from "rxjs/operators";
 import {
   Node,
   NOT_WALKED_YET,
@@ -15,8 +15,7 @@ import {
   RefrenceNameContext,
   LabelRefrenceMemberAccessExpressionContext,
   NamedCollectionMemberContext,
-  ArrayMemberContext,
-  ArrayForeachMemberContext
+  ArrayMemberContext
 } from "../Parser/ReactiveGrammerParser";
 import { isProperty, NameDefinition, Namespace, Struct, isStruct } from "./Models";
 import { isArray } from "util";
