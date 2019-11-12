@@ -29,27 +29,41 @@ export function nodeToInstanceNodeTree(node: Node): InstanceNodeTree {
   };
 }
 
-export class NameInstance {
-  static globalNameInstanceCounter: number = 0;
+function getNamespaceFullName(namespace: Namespace): string {
+  let parent: Namespace | null = namespace.parent;
+  let name = namespace.name;
+  while (parent != null) {
+    name = `${parent.name}:${name}`;
+    parent = parent.parent;
+  }
+  return name;
+}
 
+export class NameInstance {
   get value(): Observable<any> {
     return this._value;
   }
 
   private _value: Observable<any>;
   public name: string;
-  constructor(public definition: NameDefinition, private parent: Namespace | Struct) {
-    this.name = definition.context.IDENTIFIER().text;
+  constructor(public definition: NameDefinition, private parent: Namespace | Struct, private solver: Solver) {
+    const baseName = definition.context.IDENTIFIER().text;
+    if (isStruct(parent)) {
+      this.name = baseName;
+    } else {
+      this.name = `${getNamespaceFullName(parent)}:${baseName}`;
+    }
+
     this._value = new BehaviorSubject<string>(
-      `name:${definition.context.text}#${NameInstance.globalNameInstanceCounter}`
+      `name:${definition.context.text}#${solver.globalNameInstanceCounter}`
     ).asObservable();
-    NameInstance.globalNameInstanceCounter += 1;
+    solver.globalNameInstanceCounter += 1;
   }
 }
 
-function createNameInstancesFromNode(node: Node): NameInstance[] {
+function createNameInstancesFromNode(node: Node, solver: Solver): NameInstance[] {
   if (!isStruct(node.refrence.value)) return [];
-  return node.refrence.value.names.map(name => new NameInstance(name, node.refrence.value as Struct));
+  return node.refrence.value.names.map(name => new NameInstance(name, node.refrence.value as Struct, solver));
 }
 
 export class NodeInstance {
@@ -57,15 +71,14 @@ export class NodeInstance {
   names: NameInstance[];
   constructor(node: Node, public solver: Solver) {
     this.tree = nodeToInstanceNodeTree(node);
-    this.names = createNameInstancesFromNode(node);
+    this.names = createNameInstancesFromNode(node, solver);
   }
 
   getName(name: RefrenceNameContext | LabelRefrenceMemberAccessExpressionContext): NameInstance | undefined {
     // if is LabelRefrenceMemberAccessExpressionContext => find in NodeInstance
     if (name instanceof LabelRefrenceMemberAccessExpressionContext) {
       const accessChain = name.IDENTIFIER();
-      // TODO: add support for nested
-      debugger;
+      // TODO: add support for chain call
       return this.names.find(x => x.name === accessChain[0].text);
     } else {
       // else if is RefrenceNameContext find in globalNames from solver
@@ -217,6 +230,15 @@ function resolve(tree: InstanceNodeTree, initialValue: { [key: string]: Instance
       throw new Error(`cannot resolve ${source.context.text}`);
     }
   }
+
+  if (source instanceof RefrenceNameContext) {
+    const nameInstance = scope.getName(source);
+    if (nameInstance != null) {
+      tree.instance = nameInstance.value;
+    } else {
+      throw new Error(`cannot resolve ${source.text}`);
+    }
+  }
 }
 
 type CondValueExp = {
@@ -239,13 +261,8 @@ function handleAtom(source: Refrence["value"], tree: InstanceNodeTree, scope: No
 
     const refrenceCtx = source.refrenceExpression();
     if (refrenceCtx != null) {
-      if (refrenceCtx.labelRefrenceMemberAccessExpression() != null) {
-        // first dep of this node must be the resolved refrence
-        tree.instance = tree.dependecies[0].instance;
-        return;
-      } else {
-        throw new Error("this type of refrence is not supported yet!");
-      }
+      tree.instance = tree.dependecies[0].instance;
+      return;
     }
 
     // conditional

@@ -34,11 +34,21 @@ struct ($this Test) {
   )
 }
 
+name Hi
+
+namespace Test {
+
+    name Hello
+
+}
+
 struct ($this Dep) {
   name Hi
   propDep1: Core:String default ("from input:" + $this.propDepIn)
   propDepIn: Core:String default($this.Hi)
   nameRef: Core:String default ($this.Hi)
+  nameRef: Core:String default (Hi)
+  nameRef: Core:String default (Test:Hello)
 }
 `;
 const App: React.FC = () => {

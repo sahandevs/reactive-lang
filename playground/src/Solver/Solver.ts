@@ -45,31 +45,33 @@ function getStructFromFullname(fullname: string, namespace: Namespace): Struct {
   }
 }
 
-function createNameInstancesFromNamespace(node: Namespace): NameInstance[] {
+function createNameInstancesFromNamespace(node: Namespace, solver: Solver): NameInstance[] {
   let names: NameInstance[] = [];
   node.names.forEach(name => {
-    names.push(new NameInstance(name, node));
+    names.push(new NameInstance(name, node, solver));
   });
   node.children.forEach(child => {
     if (isNamespace(child)) {
-      names = [...names, ...createNameInstancesFromNamespace(child)];
+      names = [...names, ...createNameInstancesFromNamespace(child, solver)];
     }
-  })
+  });
   return names;
 }
 
 export class Solver {
   private structs: Struct[];
   private globalNames: NameInstance[];
+  globalNameInstanceCounter: number = 0;
 
   constructor(public root: Namespace) {
     this.structs = flatStructsFromNamespace(root);
-    this.globalNames = createNameInstancesFromNamespace(root);
+    this.globalNames = createNameInstancesFromNamespace(root, this);
     // analyzer
   }
 
   getName(name: RefrenceNameContext): NameInstance | undefined {
-    throw new Error("not implemented");
+    const target = `root:${name.text}`;
+    return this.globalNames.find(x => x.name === target);
   }
 
   getStructByName(name: string): Struct {

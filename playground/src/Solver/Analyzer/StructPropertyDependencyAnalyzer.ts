@@ -4,7 +4,8 @@ import {
   AtomContext,
   RefrenceExpressionContext,
   LabelRefrenceMemberAccessExpressionContext,
-  NamedCollectionMemberContext
+  NamedCollectionMemberContext,
+  RefrenceNameContext
 } from "../../Parser/ReactiveGrammerParser";
 type ResolvedRefrence =
   | Struct
@@ -13,7 +14,8 @@ type ResolvedRefrence =
   | AtomContext
   | Node
   | NamedCollectionMemberContext
-  | UnknownLabelRefrence;
+  | UnknownLabelRefrence
+  | RefrenceNameContext;
 type UnknownLabelRefrence = {
   isUnknownLabelRefrence: true;
   context: LabelRefrenceMemberAccessExpressionContext;
@@ -277,44 +279,60 @@ function getAllLabelsFromNode(node: Node): { [key: string]: Node } {
 
 function resolveRawRefrences(node: Node, labelCache: { [key: string]: Node }) {
   if (node.refrence.isRaw) {
-    let refExp = (node.refrence.value as any).refrenceExpression();
-    let ref = refExp.labelRefrenceMemberAccessExpression()! as LabelRefrenceMemberAccessExpressionContext;
-    const labelName = ref.LABEL_NAME().text;
-    const member = ref.IDENTIFIER().map(x => x.text)[0];
-    let targetNode = labelCache[labelName];
-    if (targetNode == null) {
-      throw new Error("cannot resolve label " + labelName);
-    }
-    if (member !== "self") {
-      if (isStruct(targetNode.refrence.value) && targetNode.dependencies !== NOT_WALKED_YET) {
-        const targetProperty = targetNode.dependencies.find(x => (x.refrence.value as Property).name === member);
-        if (targetProperty != null) {
-          targetNode = targetProperty;
-          node.refrence.isRaw = false;
-          node.dependencies = [targetNode];
-        } else {
-          node.refrence.isRaw = false;
-          const refCon: UnknownLabelRefrence = {
-            context: ref,
-            isUnknownLabelRefrence: true
-          };
-          node.dependencies = [
-            {
-              dependencies: [],
-              refrence: {
-                isRaw: false,
-                value: refCon
+    let refExp = (node.refrence.value as any).refrenceExpression() as RefrenceExpressionContext;
+    let labelRef = refExp.labelRefrenceMemberAccessExpression();
+    if (labelRef != null) {
+      const labelName = labelRef.LABEL_NAME().text;
+      const member = labelRef.IDENTIFIER().map(x => x.text)[0];
+      let targetNode = labelCache[labelName];
+      if (targetNode == null) {
+        throw new Error("cannot resolve label " + labelName);
+      }
+      if (member !== "self") {
+        if (isStruct(targetNode.refrence.value) && targetNode.dependencies !== NOT_WALKED_YET) {
+          const targetProperty = targetNode.dependencies.find(x => (x.refrence.value as Property).name === member);
+          if (targetProperty != null) {
+            targetNode = targetProperty;
+            node.refrence.isRaw = false;
+            node.dependencies = [targetNode];
+          } else {
+            node.refrence.isRaw = false;
+            const refCon: UnknownLabelRefrence = {
+              context: labelRef,
+              isUnknownLabelRefrence: true
+            };
+            node.dependencies = [
+              {
+                dependencies: [],
+                refrence: {
+                  isRaw: false,
+                  value: refCon
+                }
               }
-            }
-          ];
-          // throw new Error("cannot resolve property " + ref.text);
+            ];
+            // throw new Error("cannot resolve property " + ref.text);
+          }
+        } else {
+          throw new Error("Node not supported yet!");
         }
       } else {
-        throw new Error("Node not supported yet!");
+        node.refrence.isRaw = false;
+        node.dependencies = [targetNode];
       }
-    } else {
+    }
+
+    const namespaceMemberRef = refExp.refrenceName();
+    if (namespaceMemberRef != null) {
       node.refrence.isRaw = false;
-      node.dependencies = [targetNode];
+      node.dependencies = [
+        {
+          dependencies: [],
+          refrence: {
+            isRaw: false,
+            value: namespaceMemberRef
+          }
+        }
+      ];
     }
   }
   if (node.dependencies !== NOT_WALKED_YET) {
