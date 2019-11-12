@@ -1,5 +1,5 @@
 import { Solver } from "./Solver";
-import { Observable, BehaviorSubject, combineLatest, isObservable } from "rxjs";
+import { Observable, BehaviorSubject, combineLatest, isObservable, Subscription } from "rxjs";
 import { map, flatMap } from "rxjs/operators";
 import {
   Node,
@@ -492,8 +492,17 @@ function createForeachItemsExpression(
   if (itemsInstance instanceof NodeInstance) {
     throw new Error("using a node instance here is invalid!");
   }
-  return itemsInstance.pipe(
-    map(items => {
+
+  let updated = new BehaviorSubject<null>(null);
+  let subscriptions: Subscription[] = [];
+  function updateUpstream() {
+    subscriptions.forEach(x => x.unsubscribe());
+    subscriptions = [];
+    updated.next(null);
+  }
+
+  return combineLatest(itemsInstance, updated).pipe(
+    map(([items, _]) => {
       const instances: Observable<any>[] = [];
       items.forEach((item: any, i: number) => {
         let _node = expressionToNode(_exprNode)[0];
@@ -518,6 +527,19 @@ function createForeachItemsExpression(
           instances.push(new BehaviorSubject(vInstanceNode.instance!));
         else instances.push(vInstanceNode.instance!);
       });
+      let updateCount = 0;
+
+      instances.forEach(i =>
+        subscriptions.push(
+          i.subscribe(x => {
+            updateCount += 1;
+            if (updateCount > instances.length) {
+              updateUpstream();
+            }
+          })
+        )
+      );
+
       return instances;
     })
   );

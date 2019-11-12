@@ -20,10 +20,10 @@ export function flattenObservables(observables: Observable<any>[]): Observable<a
     function check() {
       if (!items.includes(undefined)) {
         observer.next(items);
-        observer.complete();
-        subs.forEach(x => x.unsubscribe());
+        items = createArray(observables.length);
       }
     }
+
     observables.forEach((element, i) => {
       subs.push(element.subscribe(v => {
         items[i] = v;
