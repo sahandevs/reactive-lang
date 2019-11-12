@@ -24,31 +24,13 @@ struct ($this Test) {
   prop1: Core:String default ("Hi !" + $this.propIn)
   prop2: Core:String default ("test" + ($lbl $this.prop1) + "test" + $this.prop1)
   prop3: Core:Number default (
-    Dep(propDepIn: $this.prop1, propDep1: "[Override test]")
+    Dep(propDepIn: $this.prop1)
   )
-  hi: Any default (
-    if ($this.prop1 == "Hi !propInValue")
-        "Hi !"
-    else
-        "Hello"
-  )
-}
-
-name Hi
-
-namespace Test {
-
-    name Hello
-
 }
 
 struct ($this Dep) {
-  name Hi
   propDep1: Core:String default ("from input:" + $this.propDepIn)
-  propDepIn: Core:String default($this.Hi)
-  nameRef: Core:String default ($this.Hi)
-  nameRef: Core:String default (Hi)
-  nameRef: Core:String default (Test:Hello)
+  propDepIn: Core:String
 }
 `;
 const App: React.FC = () => {

@@ -7,7 +7,8 @@ import {
   PrimitiveExpressionContext,
   ExpressionContext,
   RefrenceNameContext,
-  LabelRefrenceMemberAccessExpressionContext
+  LabelRefrenceMemberAccessExpressionContext,
+  NamedCollectionMemberContext
 } from "../Parser/ReactiveGrammerParser";
 import { isProperty, NameDefinition, Namespace, Struct, isStruct } from "./Models";
 export type Instance = Observable<any> | NodeInstance;
@@ -103,6 +104,106 @@ export class NodeInstance {
   }
 }
 
+function handleExpression(
+  source: ExpressionContext,
+  tree: InstanceNodeTree,
+  initialValue: { [key: string]: Instance },
+  scope: NodeInstance
+): boolean {
+  // single expressions
+  let expressions = source.expression();
+
+  if (expressions.length === 0) {
+    tree.instance = tree.dependecies[0].instance!;
+    return true;
+  }
+
+  if (expressions.length === 1 && source.IS() == null) {
+    let instance = tree.dependecies[0].instance!;
+    const expr = expressions[0];
+    // handle not
+    if (expr.NOT()) {
+      if (instance instanceof NodeInstance) throw new Error("cannot use not operator for struct");
+      instance = instance.pipe(map(x => !x));
+    }
+    // handle paran
+    tree.instance = instance;
+    return true;
+  }
+
+  // TODO: handle is expression
+
+  // multi expression
+  if (expressions.length === 2) {
+    const operator = source.children![1].text;
+    if (tree.dependecies.length === 1) {
+      tree.instance = tree.dependecies[0].instance;
+      return true;
+    }
+    if (tree.dependecies[0].instance! instanceof NodeInstance || tree.dependecies[1].instance! instanceof NodeInstance)
+      throw new Error("cannot use basic operators for struct");
+
+    if (operator === "+") {
+      tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
+        map(([a, b]) => a + b)
+      );
+    } else if (operator === "-") {
+      tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
+        map(([a, b]) => a - b)
+      );
+    } else if (operator === "*") {
+      tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
+        map(([a, b]) => a * b)
+      );
+    } else if (operator === "/") {
+      tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
+        map(([a, b]) => a / b)
+      );
+    } else if (operator === "-") {
+      tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
+        map(([a, b]) => a - b)
+      );
+    } else if (operator === ">") {
+      tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
+        map(([a, b]) => a > b)
+      );
+    } else if (operator === ">=") {
+      tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
+        map(([a, b]) => a >= b)
+      );
+    } else if (operator === "<") {
+      tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
+        map(([a, b]) => a < b)
+      );
+    } else if (operator === "<=") {
+      tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
+        map(([a, b]) => a <= b)
+      );
+    } else if (operator === "or") {
+      tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
+        map(([a, b]) => a || b)
+      );
+    } else if (operator === "and") {
+      tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
+        map(([a, b]) => a && b)
+      );
+    } else if (operator === "==") {
+      tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
+        map(([a, b]) => a === b)
+      );
+    } else if (operator === "!=") {
+      tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
+        map(([a, b]) => a !== b)
+      );
+    } else {
+      throw new Error("operator " + operator + " not supported yet!");
+    }
+    return true;
+  }
+
+  return false;
+}
+
 function resolve(tree: InstanceNodeTree, initialValue: { [key: string]: Instance }, scope: NodeInstance) {
   // check if has an instance (resolved)
   if (tree.instance != null) return;
@@ -115,92 +216,14 @@ function resolve(tree: InstanceNodeTree, initialValue: { [key: string]: Instance
   const source = tree.node.refrence.value;
 
   if (isExpressionContext(source)) {
-    // single expressions
-    const expressions = source.expression();
-    if (expressions.length === 1 && source.IS() == null) {
-      let instance = tree.dependecies[0].instance!;
-      const expr = expressions[0];
-      // handle not
-      if (expr.NOT()) {
-        if (instance instanceof NodeInstance) throw new Error("cannot use not operator for struct");
-        instance = instance.pipe(map(x => !x));
-      }
-      // handle paran
-      tree.instance = instance;
+    if (handleExpression(source, tree, initialValue, scope)) return;
+  }
+
+  if (source instanceof NamedCollectionMemberContext) {
+    if (handleExpression(source.expression(), tree, initialValue, scope)) {
       return;
-    }
-
-    // TODO: handle is expression
-
-    // multi expression
-    if (expressions.length === 2) {
-      const operator = source.children![1].text;
-      if (tree.dependecies.length === 1) {
-        tree.instance = tree.dependecies[0].instance;
-        return;
-      }
-      if (
-        tree.dependecies[0].instance! instanceof NodeInstance ||
-        tree.dependecies[1].instance! instanceof NodeInstance
-      )
-        throw new Error("cannot use basic operators for struct");
-
-      if (operator === "+") {
-        tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-          map(([a, b]) => a + b)
-        );
-      } else if (operator === "-") {
-        tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-          map(([a, b]) => a - b)
-        );
-      } else if (operator === "*") {
-        tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-          map(([a, b]) => a * b)
-        );
-      } else if (operator === "/") {
-        tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-          map(([a, b]) => a / b)
-        );
-      } else if (operator === "-") {
-        tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-          map(([a, b]) => a - b)
-        );
-      } else if (operator === ">") {
-        tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-          map(([a, b]) => a > b)
-        );
-      } else if (operator === ">=") {
-        tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-          map(([a, b]) => a >= b)
-        );
-      } else if (operator === "<") {
-        tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-          map(([a, b]) => a < b)
-        );
-      } else if (operator === "<=") {
-        tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-          map(([a, b]) => a <= b)
-        );
-      } else if (operator === "or") {
-        tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-          map(([a, b]) => a || b)
-        );
-      } else if (operator === "and") {
-        tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-          map(([a, b]) => a && b)
-        );
-      } else if (operator === "==") {
-        tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-          map(([a, b]) => a === b)
-        );
-      } else if (operator === "!=") {
-        tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-          map(([a, b]) => a !== b)
-        );
-      } else {
-        throw new Error("operator " + operator + " not supported yet!");
-      }
-      return;
+    } else {
+      throw new Error("unhandled situtation");
     }
   }
 
@@ -216,9 +239,6 @@ function resolve(tree: InstanceNodeTree, initialValue: { [key: string]: Instance
       tree.instance = tree.dependecies[0].instance!;
     }
   }
-
-  // atom
-  handleAtom(source, tree, scope);
 
   // handle unsure cases
 
@@ -239,6 +259,9 @@ function resolve(tree: InstanceNodeTree, initialValue: { [key: string]: Instance
       throw new Error(`cannot resolve ${source.text}`);
     }
   }
+
+  // atom
+  handleAtom(source, tree, scope);
 }
 
 type CondValueExp = {
@@ -247,6 +270,16 @@ type CondValueExp = {
 };
 
 function handleAtom(source: Refrence["value"], tree: InstanceNodeTree, scope: NodeInstance): void {
+  // expression atom
+  if (isExpressionContext(source)) {
+    // if has single atom just check for prefix + or -
+    const atom = source.atom();
+    if (atom != null) {
+      handleAtom(atom, tree, scope);
+      return;
+    }
+  }
+
   // atom
   if (isAtomContext(source)) {
     // primitve
@@ -307,54 +340,60 @@ function handleAtom(source: Refrence["value"], tree: InstanceNodeTree, scope: No
           })
         );
         return;
-      } else if (tree.dependecies.length === 1) {
-        // TODO: check why i should check this?!
-        tree.instance = tree.dependecies[0].instance;
-        return;
+      } else {
+        throw new Error("unresolved dependencies");
+        // return;
       }
     }
 
     // new struct expression
     const newStructCtx = source.newStructExpression();
     if (newStructCtx != null) {
-      if (
-        tree.dependecies.length === 1 &&
-        tree.dependecies[0].instance !== null &&
-        tree.dependecies[0].instance! instanceof NodeInstance
-      ) {
-        // TODO: check why i should check this?!
-        // clue : it may because of nested expressions! same as the
-        // check in the atomExpression above
-        tree.instance = tree.dependecies[0].instance!;
-        return;
-      } else {
-        const structName = newStructCtx.refrenceName().text;
-        const struct = scope.solver.instantiateStruct(structName) as NodeInstance;
-        // collect parameters
-        let params: { [key: string]: Instance } = {};
-        let paramNames: string[];
-        const paramBody = newStructCtx.parameters().parameterBody();
-        if (paramBody != null) {
-          // TODO: optimize this:
-          paramNames = paramBody.text.split(",").map(x => x.split(":")[0]);
-        }
-        tree.dependecies.forEach((dep, i) => {
-          params[paramNames[i]] = dep.instance!;
-        });
-        struct.init(params);
-        tree.instance = struct;
-        return;
+      const structName = newStructCtx.refrenceName().text;
+      const struct = scope.solver.instantiateStruct(structName) as NodeInstance;
+      // collect parameters
+      let params: { [key: string]: Instance } = {};
+      let paramNames: string[];
+      const paramBody = newStructCtx.parameters().parameterBody();
+      if (paramBody != null) {
+        // TODO: optimize this:
+        paramNames = paramBody.text.split(",").map(x => x.split(":")[0]);
       }
-    }
-  }
-
-  // expression atom
-  if (isExpressionContext(source)) {
-    // if has single atom just check for prefix + or -
-    const atom = source.atom();
-    if (atom != null) {
-      handleAtom(atom, tree, scope);
+      tree.dependecies.forEach((dep, i) => {
+        params[paramNames[i]] = dep.instance!;
+      });
+      struct.init(params);
+      tree.instance = struct;
       return;
+    }
+
+    const namedCollection = source.namedCollectionExpression();
+    if (namedCollection != null) {
+      // if names and expressino length is not equal there is a bug
+      // clue: it may be because of expression in expressions like others ( see above )
+      const members = namedCollection.namedCollectionMember();
+      const expressions = tree.dependecies.map(x => {
+        if (x.instance instanceof NodeInstance) {
+          return new BehaviorSubject<NodeInstance>(x.instance);
+        } else {
+          return x.instance!;
+        }
+      });
+      const names = members.map(member => {
+        const refName = member.refrenceName();
+        return scope.getName(refName == null ? member.labelRefrenceMemberAccessExpression()! : refName)!.value;
+      });
+      const combined = zipFlatten(names, expressions);
+      tree.instance = combineLatest(combined).pipe(
+        map(pairs => {
+          const chunkedPairs = chunk(pairs, 2);
+          let result: any = {};
+          for (let [key, value] of chunkedPairs) {
+            result[key] = value;
+          }
+          return result;
+        })
+      );
     }
   }
 
@@ -367,6 +406,15 @@ function chunk<T>(input: T[], parts: number = 2): T[][] {
     result.push([input[i], input[i + 1]]);
   }
   return result;
+}
+
+function zipFlatten<T>(a: T[], b: T[]) {
+  var arr: T[] = [];
+  for (let key in a) {
+    arr.push(a[key]);
+    arr.push(b[key]);
+  }
+  return arr;
 }
 
 function makePrimitive(atom: PrimitiveExpressionContext): Observable<any> {
