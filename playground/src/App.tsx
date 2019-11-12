@@ -21,16 +21,11 @@ import { BehaviorSubject } from "rxjs";
 const example = `
 struct ($this Test) {
   propIn: Core:String
-  prop1: Core:String default ("Hi !" + $this.propIn)
-  prop2: Core:String default ("test" + ($lbl $this.prop1) + "test" + $this.prop1)
-  prop3: Core:Number default (
-    Dep(propDepIn: $this.prop1)
-  )
-}
-
-struct ($this Dep) {
-  propDep1: Core:String default ("from input:" + $this.propDepIn)
-  propDepIn: Core:String
+  prop1: Core:List of Core:String default (Core:String#[
+    $ref.self,
+    ($ref "Test string"),
+    $this.propIn,
+  ])
 }
 `;
 const App: React.FC = () => {

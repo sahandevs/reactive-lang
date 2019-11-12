@@ -8,7 +8,8 @@ import {
   ExpressionContext,
   RefrenceNameContext,
   LabelRefrenceMemberAccessExpressionContext,
-  NamedCollectionMemberContext
+  NamedCollectionMemberContext,
+  ArrayMemberContext
 } from "../Parser/ReactiveGrammerParser";
 import { isProperty, NameDefinition, Namespace, Struct, isStruct } from "./Models";
 export type Instance = Observable<any> | NodeInstance;
@@ -392,6 +393,34 @@ function handleAtom(source: Refrence["value"], tree: InstanceNodeTree, scope: No
             result[key] = value;
           }
           return result;
+        })
+      );
+    }
+
+    if (source.arrayExpression() != null) {
+      const result: (Observable<any> | NodeInstance)[] = [];
+      // if member type is expression simply add to value
+      // else it's a forEach member
+      tree.dependecies.forEach(dep => {
+        const ref = dep.node.refrence.value as ArrayMemberContext;
+        if (ref.arrayForeachMember()) {
+          return;
+        }
+
+        if (ref.expression()) {
+          result.push(dep.dependecies[0]!.instance!);
+          return;
+        }
+        debugger;
+        throw new Error("not supported");
+      });
+
+      tree.instance = combineLatest(
+        result.map(i => {
+          if (i instanceof NodeInstance) {
+            return new BehaviorSubject<NodeInstance>(i);
+          }
+          return i;
         })
       );
     }

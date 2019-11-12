@@ -5,7 +5,8 @@ import {
   RefrenceExpressionContext,
   LabelRefrenceMemberAccessExpressionContext,
   NamedCollectionMemberContext,
-  RefrenceNameContext
+  RefrenceNameContext,
+  ArrayMemberContext
 } from "../../Parser/ReactiveGrammerParser";
 type ResolvedRefrence =
   | Struct
@@ -15,7 +16,14 @@ type ResolvedRefrence =
   | Node
   | NamedCollectionMemberContext
   | UnknownLabelRefrence
-  | RefrenceNameContext;
+  | RefrenceNameContext
+  | ArrayMemberContext;
+
+export enum ArrayMemberRefrenceType {
+  ExpressionMember = "ArrayMemberRefrenceType:Member",
+  ForEachMember = "ArrayMemberRefrenceType:ForEachMember"
+}
+
 type UnknownLabelRefrence = {
   isUnknownLabelRefrence: true;
   context: LabelRefrenceMemberAccessExpressionContext;
@@ -222,7 +230,33 @@ function atomToNode(atom: AtomContext): Node {
   const listCtx = atom.arrayExpression();
   if (listCtx != null) {
     // TODO: add support for list
-    throw new Error("arrays not supported yet!");
+    listCtx.arrayMember().forEach(member => {
+      const expressionCtx = member.expression();
+      if (expressionCtx != null) {
+        dependencies.push({
+          dependencies: expressionToNode(expressionCtx),
+          refrence: {
+            isRaw: false,
+            value: member
+          }
+        });
+        return;
+      }
+
+      const forEachMember = member.arrayForeachMember();
+      if (forEachMember != null) {
+        const [condition, value] = forEachMember.expression();
+        dependencies.push({
+          dependencies: [...expressionToNode(condition), ...expressionToNode(value)],
+          refrence: {
+            isRaw: false,
+            value: member
+          }
+        });
+        return;
+      }
+      throw new Error("Not supported");
+    });
   }
 
   const namedCollectionCtx = atom.namedCollectionExpression();
