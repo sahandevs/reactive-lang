@@ -124,7 +124,7 @@ namedCollectionMember: (
 	) '->' expression;
 
 arrayForeachMember:
-	FOREACH '(' IDENTIFIER IN expression ')' expression;
+	FOREACH '(' label IN expression ')' expression;
 conditionalValueExpression:
 	conditionalValueExpressionTrueBranch conditionalValueExpressionElseIfBranch*
 		conditionalValueExpressionElseBranch*;

@@ -20,11 +20,19 @@ import { NodeInstance } from "./Solver/NodeInstance";
 import { BehaviorSubject } from "rxjs";
 const example = `
 struct ($this Test) {
-  propIn: Core:String
+  propIn: Core:Boolean
+  
+  options: Core:List of Core:String default (
+    if ($this.propIn)
+        Core:String#[3,4,5,]
+    else
+        Core:String#[1,2,3,]
+  )
+  
   prop1: Core:List of Core:String default (Core:String#[
-    $ref.self,
-    ($ref "Test string"),
-    $this.propIn,
+    "[TEST]",
+    foreach ($item in $this.options)
+        1,
   ])
 }
 `;
@@ -131,7 +139,7 @@ ${e}
                 onClick={() => {
                   const _nodeInstance = solver.instantiateStruct(structFullName) as NodeInstance;
                   _nodeInstance.init({
-                    propIn: new BehaviorSubject<string>("propInValue")
+                    propIn: new BehaviorSubject(true)
                   });
                   logInstance(_nodeInstance);
                   console.log(_nodeInstance);

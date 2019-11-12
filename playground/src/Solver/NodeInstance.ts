@@ -1,7 +1,13 @@
 import { Solver } from "./Solver";
-import { Observable, BehaviorSubject, combineLatest } from "rxjs";
-import { map } from "rxjs/operators";
-import { Node, NOT_WALKED_YET, Refrence, isUnknownLabelRefrence } from "./Analyzer/StructPropertyDependencyAnalyzer";
+import { Observable, BehaviorSubject, combineLatest, merge, isObservable, from, of } from "rxjs";
+import { map, flatMap, combineLatest as oCombineLatest, switchMap, exhaustMap, mergeAll } from "rxjs/operators";
+import {
+  Node,
+  NOT_WALKED_YET,
+  Refrence,
+  isUnknownLabelRefrence,
+  expressionToNode
+} from "./Analyzer/StructPropertyDependencyAnalyzer";
 import {
   AtomContext,
   PrimitiveExpressionContext,
@@ -9,9 +15,12 @@ import {
   RefrenceNameContext,
   LabelRefrenceMemberAccessExpressionContext,
   NamedCollectionMemberContext,
-  ArrayMemberContext
+  ArrayMemberContext,
+  ArrayForeachMemberContext
 } from "../Parser/ReactiveGrammerParser";
 import { isProperty, NameDefinition, Namespace, Struct, isStruct } from "./Models";
+import { isArray } from "util";
+import { flattenObservables } from "./Analyzer/Utils";
 export type Instance = Observable<any> | NodeInstance;
 
 type InstanceNodeTree = {
@@ -220,6 +229,8 @@ function resolve(tree: InstanceNodeTree, initialValue: { [key: string]: Instance
     if (handleExpression(source, tree, initialValue, scope)) return;
   }
 
+  // named collection member
+
   if (source instanceof NamedCollectionMemberContext) {
     if (handleExpression(source.expression(), tree, initialValue, scope)) {
       return;
@@ -262,7 +273,7 @@ function resolve(tree: InstanceNodeTree, initialValue: { [key: string]: Instance
   }
 
   // atom
-  handleAtom(source, tree, scope);
+  handleAtom(source, tree, scope, initialValue);
 }
 
 type CondValueExp = {
@@ -270,13 +281,18 @@ type CondValueExp = {
   value: any;
 };
 
-function handleAtom(source: Refrence["value"], tree: InstanceNodeTree, scope: NodeInstance): void {
+function handleAtom(
+  source: Refrence["value"],
+  tree: InstanceNodeTree,
+  scope: NodeInstance,
+  initialValue: { [key: string]: Instance }
+): void {
   // expression atom
   if (isExpressionContext(source)) {
     // if has single atom just check for prefix + or -
     const atom = source.atom();
     if (atom != null) {
-      handleAtom(atom, tree, scope);
+      handleAtom(atom, tree, scope, initialValue);
       return;
     }
   }
@@ -404,6 +420,7 @@ function handleAtom(source: Refrence["value"], tree: InstanceNodeTree, scope: No
       tree.dependecies.forEach(dep => {
         const ref = dep.node.refrence.value as ArrayMemberContext;
         if (ref.arrayForeachMember()) {
+          result.push(createForeachItemsExpression(dep, tree, scope, initialValue));
           return;
         }
 
@@ -411,7 +428,7 @@ function handleAtom(source: Refrence["value"], tree: InstanceNodeTree, scope: No
           result.push(dep.dependecies[0]!.instance!);
           return;
         }
-        debugger;
+
         throw new Error("not supported");
       });
 
@@ -422,11 +439,62 @@ function handleAtom(source: Refrence["value"], tree: InstanceNodeTree, scope: No
           }
           return i;
         })
+      ).pipe(
+        map(items => {
+          return flattenObservables(
+            flatten(items).map(x => {
+              if (isObservable(x)) return x;
+              return new BehaviorSubject(x);
+            })
+          );
+        }),
+        flatMap(x => x)
       );
     }
   }
 
   return;
+}
+
+function flatten(array: any[]): any[] {
+  let result: any[] = [];
+  array.forEach(x => {
+    if (isArray(x)) {
+      x.forEach(v => result.push(v));
+    } else {
+      result.push(x);
+    }
+  });
+  return result;
+}
+
+function createForeachItemsExpression(
+  instanceNode: InstanceNodeTree,
+  tree: InstanceNodeTree,
+  scope: NodeInstance,
+  initialValue: { [key: string]: Instance }
+): Observable<any> {
+  const _exprNode = (instanceNode.node.refrence.value as ArrayMemberContext).arrayForeachMember()!.expression(1)!;
+
+  // array for each member
+  const itemsInstance = instanceNode.dependecies[0].instance!;
+  if (itemsInstance instanceof NodeInstance) {
+    throw new Error("using a node instance here is invalid!");
+  }
+  return itemsInstance.pipe(
+    map(items => {
+      const instances: Observable<any>[] = [];
+      items.forEach((item: any, i: number) => {
+        const vInstanceNode = nodeToInstanceNodeTree(expressionToNode(_exprNode)[0]);
+        // debugger;
+        resolve(vInstanceNode, initialValue, scope);
+        if (vInstanceNode.instance! instanceof NodeInstance)
+          instances.push(new BehaviorSubject(vInstanceNode.instance!));
+        else instances.push(vInstanceNode.instance!);
+      });
+      return instances;
+    })
+  );
 }
 
 function chunk<T>(input: T[], parts: number = 2): T[][] {

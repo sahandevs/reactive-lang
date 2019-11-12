@@ -1,6 +1,37 @@
 import { ExpressionContext, AtomContext } from "../../Parser/ReactiveGrammerParser";
 
 import { Struct } from "../Models";
+import { Observable, Observer, Subscription } from "rxjs";
+
+function createArray(length: number): any[] {
+  let items: any[] = [];
+  for (let index = 0; index < length; index++) {
+    items[index] = undefined;
+  }
+  return items;
+}
+
+export function flattenObservables(observables: Observable<any>[]): Observable<any> {
+  return Observable.create((observer: any) => {
+
+    let items: any[] = createArray(observables.length);
+    let subs: Subscription[] = [];
+
+    function check() {
+      if (!items.includes(undefined)) {
+        observer.next(items);
+        observer.complete();
+        subs.forEach(x => x.unsubscribe());
+      }
+    }
+    observables.forEach((element, i) => {
+      subs.push(element.subscribe(v => {
+        items[i] = v;
+        check();
+      }))
+    })
+  });
+}
 
 export function flattenAllExpressionsToAtoms(ctx: ExpressionContext): AtomContext[] {
   // if atom.refrenceExpression.labelRefrence? add refrence else

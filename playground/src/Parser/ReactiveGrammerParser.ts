@@ -2078,7 +2078,7 @@ export class ReactiveGrammerParser extends Parser {
 			this.state = 436;
 			this.match(ReactiveGrammerParser.T__2);
 			this.state = 437;
-			this.match(ReactiveGrammerParser.IDENTIFIER);
+			this.label();
 			this.state = 438;
 			this.match(ReactiveGrammerParser.IN);
 			this.state = 439;
@@ -2809,8 +2809,8 @@ export class ReactiveGrammerParser extends Parser {
 		"\x02\x02\u01AE\u01B1\x054\x1B\x02\u01AF\u01B1\x05V,\x02\u01B0\u01AE\x03" +
 		"\x02\x02\x02\u01B0\u01AF\x03\x02\x02\x02\u01B1\u01B2\x03\x02\x02\x02\u01B2" +
 		"\u01B3\x07\x11\x02\x02\u01B3\u01B4\x058\x1D\x02\u01B4E\x03\x02\x02\x02" +
-		"\u01B5\u01B6\x07,\x02\x02\u01B6\u01B7\x07\x05\x02\x02\u01B7\u01B8\x07" +
-		"7\x02\x02\u01B8\u01B9\x07-\x02\x02\u01B9\u01BA\x058\x1D\x02\u01BA\u01BB" +
+		"\u01B5\u01B6\x07,\x02\x02\u01B6\u01B7\x07\x05\x02\x02\u01B7\u01B8\x05" +
+		"\x14\v\x02\u01B8\u01B9\x07-\x02\x02\u01B9\u01BA\x058\x1D\x02\u01BA\u01BB" +
 		"\x07\x06\x02\x02\u01BB\u01BC\x058\x1D\x02\u01BCG\x03\x02\x02\x02\u01BD" +
 		"\u01C1\x05J&\x02\u01BE\u01C0\x05N(\x02\u01BF\u01BE\x03\x02\x02\x02\u01C0" +
 		"\u01C3\x03\x02\x02\x02\u01C1\u01BF\x03\x02\x02\x02\u01C1\u01C2\x03\x02" +
@@ -4204,7 +4204,9 @@ export class NamedCollectionMemberContext extends ParserRuleContext {
 
 export class ArrayForeachMemberContext extends ParserRuleContext {
 	public FOREACH(): TerminalNode { return this.getToken(ReactiveGrammerParser.FOREACH, 0); }
-	public IDENTIFIER(): TerminalNode { return this.getToken(ReactiveGrammerParser.IDENTIFIER, 0); }
+	public label(): LabelContext {
+		return this.getRuleContext(0, LabelContext);
+	}
 	public IN(): TerminalNode { return this.getToken(ReactiveGrammerParser.IN, 0); }
 	public expression(): ExpressionContext[];
 	public expression(i: number): ExpressionContext;

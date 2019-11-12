@@ -128,7 +128,7 @@ export class StructPropertyDependencyAnalyzer {
   }
 }
 
-function expressionToNode(ctx: ExpressionContext): Node[] {
+export function expressionToNode(ctx: ExpressionContext): Node[] {
   // if atom
   const atomExp = ctx.atom();
   if (atomExp) {
@@ -245,9 +245,9 @@ function atomToNode(atom: AtomContext): Node {
 
       const forEachMember = member.arrayForeachMember();
       if (forEachMember != null) {
-        const [condition, value] = forEachMember.expression();
+        const [condition] = forEachMember.expression();
         dependencies.push({
-          dependencies: [...expressionToNode(condition), ...expressionToNode(value)],
+          dependencies: expressionToNode(condition),
           refrence: {
             isRaw: false,
             value: member
