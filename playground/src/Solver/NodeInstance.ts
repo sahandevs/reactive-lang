@@ -498,7 +498,6 @@ function createForeachItemsExpression(
       items.forEach((item: any, i: number) => {
         let _node = expressionToNode(_exprNode)[0];
         let labelToNode: { [key: string]: Node } = { ...scope.labelCache };
-        const vInstanceNode = nodeToInstanceNodeTree(_node);
         const ref = {
           isRaw: false,
           value: new BehaviorSubject(item)
@@ -513,6 +512,7 @@ function createForeachItemsExpression(
           refrence: ref
         };
         resolveRawRefrences(_node, labelToNode);
+        const vInstanceNode = nodeToInstanceNodeTree(_node);
         resolve(vInstanceNode, initialValue, scope);
         if (vInstanceNode.instance! instanceof NodeInstance)
           instances.push(new BehaviorSubject(vInstanceNode.instance!));
