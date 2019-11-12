@@ -29,14 +29,15 @@ import {
   NameDefinition,
   Namespace,
   Struct,
-  isStruct
+  isStruct,
+  Property
 } from "./Models";
 import { isArray } from "util";
 import { flattenObservables } from "./Analyzer/Utils";
 export type Instance = Observable<any> | NodeInstance;
 
 type InstanceNodeTree = {
-  instance: Instance | null;
+  instance: Instance | undefined;
   dependecies: InstanceNodeTree[];
   node: Node;
 };
@@ -46,7 +47,7 @@ export function nodeToInstanceNodeTree(node: Node): InstanceNodeTree {
     throw new Error("node needs full structPropAnalyze");
   }
   return {
-    instance: null,
+    instance: undefined,
     dependecies: node.dependencies.map(x => nodeToInstanceNodeTree(x)),
     node: node
   };
@@ -108,6 +109,20 @@ export class NodeInstance {
   ) {
     this.tree = nodeToInstanceNodeTree(node);
     this.names = createNameInstancesFromNode(node, solver);
+  }
+
+  getProperty(name: string): Instance | undefined {
+    const node = this.tree.dependecies.find(
+      x => (x.node.refrence.value as Property).name === name
+    );
+    if (node == null) return;
+    return node.instance;
+  }
+
+  getProperties(): string[] {
+    return this.tree.dependecies.map(
+      x => (x.node.refrence.value as Property).name
+    );
   }
 
   getName(
