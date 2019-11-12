@@ -68,7 +68,7 @@ export class Solver {
     // analyzer
   }
 
-  getName(name: RefrenceNameContext): NameInstance {
+  getName(name: RefrenceNameContext): NameInstance | undefined {
     throw new Error("not implemented");
   }
 

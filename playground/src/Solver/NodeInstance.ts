@@ -1,7 +1,7 @@
 import { Solver } from "./Solver";
 import { Observable, BehaviorSubject, combineLatest } from "rxjs";
 import { map } from "rxjs/operators";
-import { Node, NOT_WALKED_YET, Refrence } from "./Analyzer/StructPropertyDependencyAnalyzer";
+import { Node, NOT_WALKED_YET, Refrence, isUnknownLabelRefrence } from "./Analyzer/StructPropertyDependencyAnalyzer";
 import {
   AtomContext,
   PrimitiveExpressionContext,
@@ -30,7 +30,21 @@ export function nodeToInstanceNodeTree(node: Node): InstanceNodeTree {
 }
 
 export class NameInstance {
-  constructor(private definition: NameDefinition, private parent: Namespace | Struct) {}
+  static globalNameInstanceCounter: number = 0;
+
+  get value(): Observable<any> {
+    return this._value;
+  }
+
+  private _value: Observable<any>;
+  public name: string;
+  constructor(public definition: NameDefinition, private parent: Namespace | Struct) {
+    this.name = definition.context.IDENTIFIER().text;
+    this._value = new BehaviorSubject<string>(
+      `name:${definition.context.text}#${NameInstance.globalNameInstanceCounter}`
+    ).asObservable();
+    NameInstance.globalNameInstanceCounter += 1;
+  }
 }
 
 function createNameInstancesFromNode(node: Node): NameInstance[] {
@@ -41,15 +55,18 @@ function createNameInstancesFromNode(node: Node): NameInstance[] {
 export class NodeInstance {
   tree: InstanceNodeTree;
   names: NameInstance[];
-  constructor(node: Node, private solver: Solver) {
+  constructor(node: Node, public solver: Solver) {
     this.tree = nodeToInstanceNodeTree(node);
     this.names = createNameInstancesFromNode(node);
   }
 
-  getName(name: RefrenceNameContext | LabelRefrenceMemberAccessExpressionContext): NameInstance {
+  getName(name: RefrenceNameContext | LabelRefrenceMemberAccessExpressionContext): NameInstance | undefined {
     // if is LabelRefrenceMemberAccessExpressionContext => find in NodeInstance
     if (name instanceof LabelRefrenceMemberAccessExpressionContext) {
-      throw new Error("not implemented yet");
+      const accessChain = name.IDENTIFIER();
+      // TODO: add support for nested
+      debugger;
+      return this.names.find(x => x.name === accessChain[0].text);
     } else {
       // else if is RefrenceNameContext find in globalNames from solver
       return this.solver.getName(name);
@@ -69,16 +86,16 @@ export class NodeInstance {
       }
     });
 
-    resolve(this.tree, initialValue, this.solver);
+    resolve(this.tree, initialValue, this);
   }
 }
 
-function resolve(tree: InstanceNodeTree, initialValue: { [key: string]: Instance }, solver: Solver) {
+function resolve(tree: InstanceNodeTree, initialValue: { [key: string]: Instance }, scope: NodeInstance) {
   // check if has an instance (resolved)
   if (tree.instance != null) return;
   // resolve dependecies if have any
   if (tree.dependecies.length > 0) {
-    tree.dependecies.forEach(dep => resolve(dep, initialValue, solver));
+    tree.dependecies.forEach(dep => resolve(dep, initialValue, scope));
   }
   // create the instance
 
@@ -188,7 +205,18 @@ function resolve(tree: InstanceNodeTree, initialValue: { [key: string]: Instance
   }
 
   // atom
-  handleAtom(source, tree, solver);
+  handleAtom(source, tree, scope);
+
+  // handle unsure cases
+
+  if (isUnknownLabelRefrence(source)) {
+    const nameInstance = scope.getName(source.context);
+    if (nameInstance != null) {
+      tree.instance = nameInstance.value;
+    } else {
+      throw new Error(`cannot resolve ${source.context.text}`);
+    }
+  }
 }
 
 type CondValueExp = {
@@ -196,7 +224,7 @@ type CondValueExp = {
   value: any;
 };
 
-function handleAtom(source: Refrence["value"], tree: InstanceNodeTree, solver: Solver): void {
+function handleAtom(source: Refrence["value"], tree: InstanceNodeTree, scope: NodeInstance): void {
   // atom
   if (isAtomContext(source)) {
     // primitve
@@ -284,7 +312,7 @@ function handleAtom(source: Refrence["value"], tree: InstanceNodeTree, solver: S
         return;
       } else {
         const structName = newStructCtx.refrenceName().text;
-        const struct = solver.instantiateStruct(structName) as NodeInstance;
+        const struct = scope.solver.instantiateStruct(structName) as NodeInstance;
         // collect parameters
         let params: { [key: string]: Instance } = {};
         let paramNames: string[];
@@ -308,7 +336,7 @@ function handleAtom(source: Refrence["value"], tree: InstanceNodeTree, solver: S
     // if has single atom just check for prefix + or -
     const atom = source.atom();
     if (atom != null) {
-      handleAtom(atom, tree, solver);
+      handleAtom(atom, tree, scope);
       return;
     }
   }

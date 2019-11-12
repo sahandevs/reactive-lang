@@ -6,7 +6,23 @@ import {
   LabelRefrenceMemberAccessExpressionContext,
   NamedCollectionMemberContext
 } from "../../Parser/ReactiveGrammerParser";
-type ResolvedRefrence = Struct | Property | ExpressionContext | AtomContext | Node | NamedCollectionMemberContext;
+type ResolvedRefrence =
+  | Struct
+  | Property
+  | ExpressionContext
+  | AtomContext
+  | Node
+  | NamedCollectionMemberContext
+  | UnknownLabelRefrence;
+type UnknownLabelRefrence = {
+  isUnknownLabelRefrence: true;
+  context: LabelRefrenceMemberAccessExpressionContext;
+};
+
+export function isUnknownLabelRefrence(value: any): value is UnknownLabelRefrence {
+  return value.isUnknownLabelRefrence;
+}
+
 type RawRefrence = RefrenceExpressionContext;
 export const NOT_WALKED_YET = "NOT_WALKED_YET";
 export type Refrence = {
@@ -79,7 +95,12 @@ export class StructPropertyDependencyAnalyzer {
     try {
       resolveRawRefrences(node, labelToNode);
     } catch (e) {
-      throw new Error("Circular dependency detected!");
+      // TODO: fix me! I KNOW THIS IS SHITTY WAY TO DETECT CIRCULAR DEPENDENCIES :)
+      if ((e + "").includes("Maximum call stack size exceeded")) {
+        throw new Error("Circular dependency detected!");
+      } else {
+        throw e;
+      }
     }
   }
 
@@ -269,15 +290,32 @@ function resolveRawRefrences(node: Node, labelCache: { [key: string]: Node }) {
         const targetProperty = targetNode.dependencies.find(x => (x.refrence.value as Property).name === member);
         if (targetProperty != null) {
           targetNode = targetProperty;
+          node.refrence.isRaw = false;
+          node.dependencies = [targetNode];
         } else {
-          throw new Error("cannot resolve property " + ref.text);
+          node.refrence.isRaw = false;
+          const refCon: UnknownLabelRefrence = {
+            context: ref,
+            isUnknownLabelRefrence: true
+          };
+          node.dependencies = [
+            {
+              dependencies: [],
+              refrence: {
+                isRaw: false,
+                value: refCon
+              }
+            }
+          ];
+          // throw new Error("cannot resolve property " + ref.text);
         }
       } else {
         throw new Error("Node not supported yet!");
       }
+    } else {
+      node.refrence.isRaw = false;
+      node.dependencies = [targetNode];
     }
-    node.refrence.isRaw = false;
-    node.dependencies = [targetNode];
   }
   if (node.dependencies !== NOT_WALKED_YET) {
     node.dependencies.forEach(n => resolveRawRefrences(n, labelCache));

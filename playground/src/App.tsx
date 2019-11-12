@@ -35,8 +35,10 @@ struct ($this Test) {
 }
 
 struct ($this Dep) {
+  name Hi
   propDep1: Core:String default ("from input:" + $this.propDepIn)
-  propDepIn: Core:String
+  propDepIn: Core:String default($this.Hi)
+  nameRef: Core:String default ($this.Hi)
 }
 `;
 const App: React.FC = () => {
