@@ -1,5 +1,11 @@
 import { Solver } from "./Solver";
-import { Observable, BehaviorSubject, combineLatest, isObservable, Subscription } from "rxjs";
+import {
+  Observable,
+  BehaviorSubject,
+  combineLatest,
+  isObservable,
+  Subscription
+} from "rxjs";
 import { map, flatMap } from "rxjs/operators";
 import {
   Node,
@@ -18,7 +24,13 @@ import {
   NamedCollectionMemberContext,
   ArrayMemberContext
 } from "../Parser/ReactiveGrammerParser";
-import { isProperty, NameDefinition, Namespace, Struct, isStruct } from "./Models";
+import {
+  isProperty,
+  NameDefinition,
+  Namespace,
+  Struct,
+  isStruct
+} from "./Models";
 import { isArray } from "util";
 import { flattenObservables } from "./Analyzer/Utils";
 export type Instance = Observable<any> | NodeInstance;
@@ -57,7 +69,11 @@ export class NameInstance {
 
   private _value: Observable<any>;
   public name: string;
-  constructor(public definition: NameDefinition, private parent: Namespace | Struct, private solver: Solver) {
+  constructor(
+    public definition: NameDefinition,
+    private parent: Namespace | Struct,
+    private solver: Solver
+  ) {
     const baseName = definition.context.IDENTIFIER().text;
     if (isStruct(parent)) {
       this.name = baseName;
@@ -72,20 +88,31 @@ export class NameInstance {
   }
 }
 
-function createNameInstancesFromNode(node: Node, solver: Solver): NameInstance[] {
+function createNameInstancesFromNode(
+  node: Node,
+  solver: Solver
+): NameInstance[] {
   if (!isStruct(node.refrence.value)) return [];
-  return node.refrence.value.names.map(name => new NameInstance(name, node.refrence.value as Struct, solver));
+  return node.refrence.value.names.map(
+    name => new NameInstance(name, node.refrence.value as Struct, solver)
+  );
 }
 
 export class NodeInstance {
   tree: InstanceNodeTree;
   names: NameInstance[];
-  constructor(node: Node, public solver: Solver, public labelCache: { [key: string]: Node }) {
+  constructor(
+    node: Node,
+    public solver: Solver,
+    public labelCache: { [key: string]: Node }
+  ) {
     this.tree = nodeToInstanceNodeTree(node);
     this.names = createNameInstancesFromNode(node, solver);
   }
 
-  getName(name: RefrenceNameContext | LabelRefrenceMemberAccessExpressionContext): NameInstance | undefined {
+  getName(
+    name: RefrenceNameContext | LabelRefrenceMemberAccessExpressionContext
+  ): NameInstance | undefined {
     // if is LabelRefrenceMemberAccessExpressionContext => find in NodeInstance
     if (name instanceof LabelRefrenceMemberAccessExpressionContext) {
       const accessChain = name.IDENTIFIER();
@@ -105,7 +132,10 @@ export class NodeInstance {
         const name = dep.node.refrence.value.name;
         const value = initialValue[name];
         if (value == null) return;
-        if (dep.node.refrence.value.readonly) throw new Error("Readonly properties default value cannot be overridden");
+        if (dep.node.refrence.value.readonly)
+          throw new Error(
+            "Readonly properties default value cannot be overridden"
+          );
         dep.instance = value;
       }
     });
@@ -133,7 +163,8 @@ function handleExpression(
     const expr = expressions[0];
     // handle not
     if (expr.NOT()) {
-      if (instance instanceof NodeInstance) throw new Error("cannot use not operator for struct");
+      if (instance instanceof NodeInstance)
+        throw new Error("cannot use not operator for struct");
       instance = instance.pipe(map(x => !x));
     }
     // handle paran
@@ -150,61 +181,77 @@ function handleExpression(
       tree.instance = tree.dependecies[0].instance;
       return true;
     }
-    if (tree.dependecies[0].instance! instanceof NodeInstance || tree.dependecies[1].instance! instanceof NodeInstance)
+    if (
+      tree.dependecies[0].instance! instanceof NodeInstance ||
+      tree.dependecies[1].instance! instanceof NodeInstance
+    )
       throw new Error("cannot use basic operators for struct");
 
     if (operator === "+") {
-      tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-        map(([a, b]) => a + b)
-      );
+      tree.instance = combineLatest(
+        tree.dependecies[0].instance!,
+        tree.dependecies[1].instance!
+      ).pipe(map(([a, b]) => a + b));
     } else if (operator === "-") {
-      tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-        map(([a, b]) => a - b)
-      );
+      tree.instance = combineLatest(
+        tree.dependecies[0].instance!,
+        tree.dependecies[1].instance!
+      ).pipe(map(([a, b]) => a - b));
     } else if (operator === "*") {
-      tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-        map(([a, b]) => a * b)
-      );
+      tree.instance = combineLatest(
+        tree.dependecies[0].instance!,
+        tree.dependecies[1].instance!
+      ).pipe(map(([a, b]) => a * b));
     } else if (operator === "/") {
-      tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-        map(([a, b]) => a / b)
-      );
+      tree.instance = combineLatest(
+        tree.dependecies[0].instance!,
+        tree.dependecies[1].instance!
+      ).pipe(map(([a, b]) => a / b));
     } else if (operator === "-") {
-      tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-        map(([a, b]) => a - b)
-      );
+      tree.instance = combineLatest(
+        tree.dependecies[0].instance!,
+        tree.dependecies[1].instance!
+      ).pipe(map(([a, b]) => a - b));
     } else if (operator === ">") {
-      tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-        map(([a, b]) => a > b)
-      );
+      tree.instance = combineLatest(
+        tree.dependecies[0].instance!,
+        tree.dependecies[1].instance!
+      ).pipe(map(([a, b]) => a > b));
     } else if (operator === ">=") {
-      tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-        map(([a, b]) => a >= b)
-      );
+      tree.instance = combineLatest(
+        tree.dependecies[0].instance!,
+        tree.dependecies[1].instance!
+      ).pipe(map(([a, b]) => a >= b));
     } else if (operator === "<") {
-      tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-        map(([a, b]) => a < b)
-      );
+      tree.instance = combineLatest(
+        tree.dependecies[0].instance!,
+        tree.dependecies[1].instance!
+      ).pipe(map(([a, b]) => a < b));
     } else if (operator === "<=") {
-      tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-        map(([a, b]) => a <= b)
-      );
+      tree.instance = combineLatest(
+        tree.dependecies[0].instance!,
+        tree.dependecies[1].instance!
+      ).pipe(map(([a, b]) => a <= b));
     } else if (operator === "or") {
-      tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-        map(([a, b]) => a || b)
-      );
+      tree.instance = combineLatest(
+        tree.dependecies[0].instance!,
+        tree.dependecies[1].instance!
+      ).pipe(map(([a, b]) => a || b));
     } else if (operator === "and") {
-      tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-        map(([a, b]) => a && b)
-      );
+      tree.instance = combineLatest(
+        tree.dependecies[0].instance!,
+        tree.dependecies[1].instance!
+      ).pipe(map(([a, b]) => a && b));
     } else if (operator === "==") {
-      tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-        map(([a, b]) => a === b)
-      );
+      tree.instance = combineLatest(
+        tree.dependecies[0].instance!,
+        tree.dependecies[1].instance!
+      ).pipe(map(([a, b]) => a === b));
     } else if (operator === "!=") {
-      tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-        map(([a, b]) => a !== b)
-      );
+      tree.instance = combineLatest(
+        tree.dependecies[0].instance!,
+        tree.dependecies[1].instance!
+      ).pipe(map(([a, b]) => a !== b));
     } else {
       throw new Error("operator " + operator + " not supported yet!");
     }
@@ -214,7 +261,11 @@ function handleExpression(
   return false;
 }
 
-function resolve(tree: InstanceNodeTree, initialValue: { [key: string]: Instance }, scope: NodeInstance) {
+function resolve(
+  tree: InstanceNodeTree,
+  initialValue: { [key: string]: Instance },
+  scope: NodeInstance
+) {
   // check if has an instance (resolved)
   if (tree.instance != null) return;
   // resolve dependecies if have any
@@ -315,7 +366,10 @@ function handleAtom(
 
     const refrenceCtx = source.refrenceExpression();
     if (refrenceCtx != null) {
-      if (tree.node.dependencies !== NOT_WALKED_YET && isInstance(tree.node.dependencies[0].refrence.value)) {
+      if (
+        tree.node.dependencies !== NOT_WALKED_YET &&
+        isInstance(tree.node.dependencies[0].refrence.value)
+      ) {
         // it's a direct value from forEach or ...
         tree.instance = tree.node.dependencies[0].refrence.value;
       } else {
@@ -329,11 +383,13 @@ function handleAtom(
 
     const conditionalCtx = source.conditionalValueExpression();
     if (conditionalCtx != null) {
-      const hasElseBranch = conditionalCtx.conditionalValueExpressionElseBranch().length > 0;
+      const hasElseBranch =
+        conditionalCtx.conditionalValueExpressionElseBranch().length > 0;
       if (tree.dependecies.length >= 2) {
         tree.instance = combineLatest(
           tree.dependecies.map(x => {
-            if (x.instance! instanceof NodeInstance) return new BehaviorSubject<NodeInstance>(x.instance!);
+            if (x.instance! instanceof NodeInstance)
+              return new BehaviorSubject<NodeInstance>(x.instance!);
             return x.instance!;
           })
         ).pipe(
@@ -363,7 +419,7 @@ function handleAtom(
               return elseBranch;
             }
 
-            throw new Error("not all paths returns a value");
+            return null;
           })
         );
         return;
@@ -408,7 +464,11 @@ function handleAtom(
       });
       const names = members.map(member => {
         const refName = member.refrenceName();
-        return scope.getName(refName == null ? member.labelRefrenceMemberAccessExpression()! : refName)!.value;
+        return scope.getName(
+          refName == null
+            ? member.labelRefrenceMemberAccessExpression()!
+            : refName
+        )!.value;
       });
       const combined = zipFlatten(names, expressions);
       tree.instance = combineLatest(combined).pipe(
@@ -430,7 +490,9 @@ function handleAtom(
       tree.dependecies.forEach(dep => {
         const ref = dep.node.refrence.value as ArrayMemberContext;
         if (ref.arrayForeachMember()) {
-          result.push(createForeachItemsExpression(dep, tree, scope, initialValue));
+          result.push(
+            createForeachItemsExpression(dep, tree, scope, initialValue)
+          );
           return;
         }
 
@@ -452,10 +514,12 @@ function handleAtom(
       ).pipe(
         map(items => {
           return flattenObservables(
-            flatten(items).map(x => {
-              if (isObservable(x)) return x;
-              return new BehaviorSubject(x);
-            })
+            flatten(items)
+              .filter(x => x != null)
+              .map(x => {
+                if (isObservable(x)) return x;
+                return new BehaviorSubject(x);
+              })
           );
         }),
         flatMap(x => x)
@@ -484,7 +548,8 @@ function createForeachItemsExpression(
   scope: NodeInstance,
   initialValue: { [key: string]: Instance }
 ): Observable<any> {
-  const _forEachExpr = (instanceNode.node.refrence.value as ArrayMemberContext).arrayForeachMember()!;
+  const _forEachExpr = (instanceNode.node.refrence
+    .value as ArrayMemberContext).arrayForeachMember()!;
   const _exprNode = _forEachExpr.expression(1)!;
   const label = _forEachExpr.label().text;
   // array for each member
