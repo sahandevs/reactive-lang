@@ -1,12 +1,13 @@
 import { Solver } from "./Solver";
-import { Observable, BehaviorSubject, combineLatest, isObservable} from "rxjs";
+import { Observable, BehaviorSubject, combineLatest, isObservable } from "rxjs";
 import { map, flatMap } from "rxjs/operators";
 import {
   Node,
   NOT_WALKED_YET,
   Refrence,
   isUnknownLabelRefrence,
-  expressionToNode
+  expressionToNode,
+  resolveRawRefrences
 } from "./Analyzer/StructPropertyDependencyAnalyzer";
 import {
   AtomContext,
@@ -79,7 +80,7 @@ function createNameInstancesFromNode(node: Node, solver: Solver): NameInstance[]
 export class NodeInstance {
   tree: InstanceNodeTree;
   names: NameInstance[];
-  constructor(node: Node, public solver: Solver) {
+  constructor(node: Node, public solver: Solver, public labelCache: { [key: string]: Node }) {
     this.tree = nodeToInstanceNodeTree(node);
     this.names = createNameInstancesFromNode(node, solver);
   }
@@ -275,6 +276,10 @@ function resolve(tree: InstanceNodeTree, initialValue: { [key: string]: Instance
   handleAtom(source, tree, scope, initialValue);
 }
 
+function isInstance(value: any): value is Instance {
+  return isObservable(value) || value instanceof NodeInstance;
+}
+
 type CondValueExp = {
   condition: any;
   value: any;
@@ -310,7 +315,13 @@ function handleAtom(
 
     const refrenceCtx = source.refrenceExpression();
     if (refrenceCtx != null) {
-      tree.instance = tree.dependecies[0].instance;
+      if (tree.node.dependencies !== NOT_WALKED_YET && isInstance(tree.node.dependencies[0].refrence.value)) {
+        // it's a direct value from forEach or ...
+        tree.instance = tree.node.dependencies[0].refrence.value;
+      } else {
+        tree.instance = tree.dependecies[0].instance;
+      }
+
       return;
     }
 
@@ -473,8 +484,9 @@ function createForeachItemsExpression(
   scope: NodeInstance,
   initialValue: { [key: string]: Instance }
 ): Observable<any> {
-  const _exprNode = (instanceNode.node.refrence.value as ArrayMemberContext).arrayForeachMember()!.expression(1)!;
-
+  const _forEachExpr = (instanceNode.node.refrence.value as ArrayMemberContext).arrayForeachMember()!;
+  const _exprNode = _forEachExpr.expression(1)!;
+  const label = _forEachExpr.label().text;
   // array for each member
   const itemsInstance = instanceNode.dependecies[0].instance!;
   if (itemsInstance instanceof NodeInstance) {
@@ -484,8 +496,23 @@ function createForeachItemsExpression(
     map(items => {
       const instances: Observable<any>[] = [];
       items.forEach((item: any, i: number) => {
-        const vInstanceNode = nodeToInstanceNodeTree(expressionToNode(_exprNode)[0]);
-        // debugger;
+        let _node = expressionToNode(_exprNode)[0];
+        let labelToNode: { [key: string]: Node } = { ...scope.labelCache };
+        const vInstanceNode = nodeToInstanceNodeTree(_node);
+        const ref = {
+          isRaw: false,
+          value: new BehaviorSubject(item)
+        };
+        labelToNode[label] = {
+          dependencies: [
+            {
+              dependencies: [],
+              refrence: ref
+            }
+          ],
+          refrence: ref
+        };
+        resolveRawRefrences(_node, labelToNode);
         resolve(vInstanceNode, initialValue, scope);
         if (vInstanceNode.instance! instanceof NodeInstance)
           instances.push(new BehaviorSubject(vInstanceNode.instance!));

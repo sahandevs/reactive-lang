@@ -87,7 +87,7 @@ export class Solver {
     if (instance) return instance;
     const struct = getStructFromFullname(fullName, this.root);
     const node = new StructPropertyDependencyAnalyzer(struct);
-    let _nodeInstance = new NodeInstance(node.rootNode, this);
+    let _nodeInstance = new NodeInstance(node.rootNode, this, node.labelCache);
     return _nodeInstance;
   }
 

@@ -32,7 +32,7 @@ struct ($this Test) {
   prop1: Core:List of Core:String default (Core:String#[
     "[TEST]",
     foreach ($item in $this.options)
-        1,
+        $item.self + "hi" + $this.propIn,
   ])
 }
 `;

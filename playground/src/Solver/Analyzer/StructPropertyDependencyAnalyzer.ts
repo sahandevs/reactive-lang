@@ -8,6 +8,7 @@ import {
   RefrenceNameContext,
   ArrayMemberContext
 } from "../../Parser/ReactiveGrammerParser";
+import { Instance } from "../NodeInstance";
 type ResolvedRefrence =
   | Struct
   | Property
@@ -17,7 +18,8 @@ type ResolvedRefrence =
   | NamedCollectionMemberContext
   | UnknownLabelRefrence
   | RefrenceNameContext
-  | ArrayMemberContext;
+  | ArrayMemberContext
+  | Instance;
 
 export enum ArrayMemberRefrenceType {
   ExpressionMember = "ArrayMemberRefrenceType:Member",
@@ -99,11 +101,13 @@ export class StructPropertyDependencyAnalyzer {
     }
   }
 
+  labelCache: { [key: string]: Node } = {};
+
   resolveRawRefrences(node: Node) {
     // cache labels
-    let labelToNode: { [key: string]: Node } = getAllLabelsFromNode(node);
+    this.labelCache = getAllLabelsFromNode(node);
     try {
-      resolveRawRefrences(node, labelToNode);
+      resolveRawRefrences(node, this.labelCache);
     } catch (e) {
       // TODO: fix me! I KNOW THIS IS SHITTY WAY TO DETECT CIRCULAR DEPENDENCIES :)
       if ((e + "").includes("Maximum call stack size exceeded")) {
@@ -297,7 +301,7 @@ function atomToNode(atom: AtomContext): Node {
   };
 }
 
-function getAllLabelsFromNode(node: Node): { [key: string]: Node } {
+export function getAllLabelsFromNode(node: Node): { [key: string]: Node } {
   let _labels: { [key: string]: Node } = {};
   const label = node.refrence.label;
   if (label != null) {
@@ -311,7 +315,7 @@ function getAllLabelsFromNode(node: Node): { [key: string]: Node } {
   return _labels;
 }
 
-function resolveRawRefrences(node: Node, labelCache: { [key: string]: Node }) {
+export function resolveRawRefrences(node: Node, labelCache: { [key: string]: Node }) {
   if (node.refrence.isRaw) {
     let refExp = (node.refrence.value as any).refrenceExpression() as RefrenceExpressionContext;
     let labelRef = refExp.labelRefrenceMemberAccessExpression();
