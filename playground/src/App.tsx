@@ -33,22 +33,23 @@ struct ($this Application) {
     currentLanguage: Core:String
 
     localization: Core:Localization injector(LanguageContext) default (
-        Localization(lan: $this.currentLanguage)
+        if ($this.currentLanguage == "fa")
+          LocalizationFa()
+         else
+          LocalizationEn()
     )
     
     view: View default (View())
 }
 
-struct ($this Localization) { 
+struct ($this LocalizationFa) { 
 
-  lan: Core:String
+  hello: Core:String default ("Salam")
+}
 
-  hello: Core:String default (
-    if ($this.lan == "fa")
-        "Salam"
-    else
-        "Hello"
-  )
+struct ($this LocalizationEn) { 
+
+  hello: Core:String default ("Hello")
 }
 `;
 const App: React.FC = () => {
