@@ -18,19 +18,26 @@ import { StructDependencyAnalyzer } from "./Solver/Analyzer/StructDependencyAnal
 import { StructPropertyDependencyAnalyzer } from "./Solver/Analyzer/StructPropertyDependencyAnalyzer";
 import { NodeInstance } from "./Solver/NodeInstance";
 import { BehaviorSubject } from "rxjs";
-const example = `
-struct Base {
+const example = `struct ($this Test) {
 
-    hi: Core:String default ("Hello from base")
-
-}
-
-struct ($this Test) which is ($base Base) {
   propIn: Core:Boolean
   
-  combineFromMixin: Core:String default ($base.hi + " and Test struct") 
+  text: Core:String default ("hi !")
+  
+  dep: Dep default(Dep())
+  
+  isTextLongEnough: Core:Boolean default(
+      $this.dep.innerText.length > 0
+  )
+
+
 }
-`;
+
+struct Dep {
+
+    innerText: Core:String default (":)")
+
+}`;
 const App: React.FC = () => {
   const [logValue, setLogValue] = React.useState("");
   const [errorValue, setErrorValue] = React.useState("");
