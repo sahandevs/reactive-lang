@@ -295,7 +295,11 @@ type CondValueExp = {
   value: any;
 };
 
-function resolveAccessChain(chain: string[], currentNode: InstanceNodeTree): Instance | undefined {
+function resolveAccessChain(
+  chain: string[],
+  currentNode: InstanceNodeTree,
+  inParams?: Instance[]
+): Instance | undefined {
   if (currentNode.instance == null) throw new Error("Unhandle scenario!");
   if (currentNode.instance instanceof NodeInstance) {
     const propName = chain[1];
@@ -303,16 +307,24 @@ function resolveAccessChain(chain: string[], currentNode: InstanceNodeTree): Ins
       x => (x.node.refrence.value as Property).name === propName
     );
     if (chain.length > 2) {
-      return resolveAccessChain(chain.slice(1, chain.length), prop!);
+      return resolveAccessChain(chain.slice(1, chain.length), prop!, inParams);
     } else {
       return prop!.instance;
     }
   } else {
-    return currentNode.instance.pipe(
-      map(x => {
+    const _params = inParams!;
+    const value = combineLatest([currentNode.instance, ..._params]);
+    return value.pipe(
+      map(params => {
         const current = chain[1]; // chain[0] is instance itself
+        const currentInstance = params[0] as any;
         if (chain.length === 2) {
-          return x[current];
+          if (inParams == null) {
+            return currentInstance[current];
+          } else {
+            // is a function call
+            return currentInstance[current](...params.slice(1, params.length));
+          }
         } else {
           throw new Error("cannot resolve primitive nested functions");
           // return resolveAccessChain(chain.slice(1, chain.length), x);
@@ -358,13 +370,28 @@ function handleAtom(
           memberAccessCtx.IDENTIFIER().map(x => x.text),
           tree.dependecies[0]
         );
+
+        return;
+      }
+
+      const memberAccessCtxWithParams = refrenceCtx.labelRefrenceMemberAccessExpressionWithParameters();
+      if (memberAccessCtxWithParams != null) {
+        tree.instance = resolveAccessChain(
+          memberAccessCtxWithParams
+            .labelRefrenceMemberAccessExpression()
+            .IDENTIFIER()
+            .map(x => x.text),
+          tree.dependecies[0],
+          tree.dependecies.slice(1, tree.dependecies.length).map(x => x.instance!)
+        );
+        return;
+      }
+
+      if (tree.node.dependencies !== NOT_WALKED_YET && isInstance(tree.node.dependencies[0].refrence.value)) {
+        // it's a direct value from forEach or ...
+        tree.instance = tree.node.dependencies[0].refrence.value;
       } else {
-        if (tree.node.dependencies !== NOT_WALKED_YET && isInstance(tree.node.dependencies[0].refrence.value)) {
-          // it's a direct value from forEach or ...
-          tree.instance = tree.node.dependencies[0].refrence.value;
-        } else {
-          tree.instance = tree.dependecies[0].instance;
-        }
+        tree.instance = tree.dependecies[0].instance;
       }
       return;
     }

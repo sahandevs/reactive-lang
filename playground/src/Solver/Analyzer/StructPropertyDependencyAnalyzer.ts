@@ -79,7 +79,7 @@ export class StructPropertyDependencyAnalyzer {
           isRaw: false,
           value: mixin
         }
-      }
+      };
     });
     // add all properties to the rootNode
     const properties: Node[] = this.root.properties.map(x => {
@@ -187,6 +187,26 @@ function atomToNode(atom: AtomContext): Node {
   // if ref
   const labelRefrenceExpr = atom.refrenceExpression();
   if (labelRefrenceExpr != null) {
+    const labelRefWithParams = labelRefrenceExpr.labelRefrenceMemberAccessExpressionWithParameters();
+    if (labelRefWithParams != null) {
+      const paramBody = labelRefWithParams.parameters().parameterBody();
+      const params = paramBody == null ? [] : paramBody.expression();
+      return {
+        dependencies: params.map(x => {
+          return {
+            dependencies: expressionToNode(x),
+            refrence: {
+              isRaw: false,
+              value: x
+            }
+          };
+        }),
+        refrence: {
+          isRaw: true,
+          value: atom
+        }
+      };
+    }
     return {
       dependencies: [],
       refrence: {
@@ -369,6 +389,35 @@ export function resolveRawRefrences(node: Node, labelCache: { [key: string]: Nod
       } else {
         node.refrence.isRaw = false;
         node.dependencies = [targetNode];
+      }
+    }
+
+    const labelRefWithParams = refExp.labelRefrenceMemberAccessExpressionWithParameters();
+    if (labelRefWithParams != null) {
+      const labelRef = labelRefWithParams.labelRefrenceMemberAccessExpression();
+      const labelName = labelRef.LABEL_NAME().text;
+      const member = labelRef.IDENTIFIER().map(x => x.text)[0];
+
+      let targetNode = labelCache[labelName];
+      if (targetNode == null) {
+        throw new Error("cannot resolve label " + labelName);
+      }
+      if (member !== "self") {
+        if (isStruct(targetNode.refrence.value) && targetNode.dependencies !== NOT_WALKED_YET) {
+          const targetProperty = targetNode.dependencies.find(x => (x.refrence.value as Property).name === member);
+          if (targetProperty != null) {
+            targetNode = targetProperty;
+            node.refrence.isRaw = false;
+            node.dependencies = [targetNode, ...(node.dependencies as Node[])];
+          } else {
+            throw new Error("cannot resolve property ");
+          }
+        } else {
+          throw new Error("Node not supported yet!");
+        }
+      } else {
+        node.refrence.isRaw = false;
+        node.dependencies = [targetNode, ...(node.dependencies as Node[])];
       }
     }
 

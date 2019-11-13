@@ -27,7 +27,7 @@ const example = `struct ($this Test) {
   dep: Dep default(Dep())
   
   isTextLongEnough: Core:Boolean default(
-      $this.dep.innerText.length > 0
+      $this.dep.innerText.startsWith(string: "hi")
   )
 
 
