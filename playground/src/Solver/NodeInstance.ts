@@ -77,10 +77,26 @@ function createNameInstancesFromNode(node: Node, solver: Solver): NameInstance[]
   return node.refrence.value.names.map(name => new NameInstance(name, node.refrence.value as Struct, solver));
 }
 
+function resolveFromParentWithDI(injectorName: string, scope: NodeInstance): Instance | undefined {
+  if (scope.parentScope == null) return undefined;
+  const item = scope.parentScope.tree.dependecies.find(
+    x => (x.node.refrence.value as Property).injector === injectorName
+  );
+  if (item == null) return undefined;
+  if (item.instance == null) resolve(item, scope.parentScope.lastInitialValue, scope.parentScope);
+  if (item.instance == null) return resolveFromParentWithDI(injectorName, scope.parentScope);
+  return item.instance;
+}
+
 export class NodeInstance {
   tree: InstanceNodeTree;
   names: NameInstance[];
-  constructor(node: Node, public solver: Solver, public labelCache: { [key: string]: Node }) {
+  constructor(
+    node: Node,
+    public solver: Solver,
+    public labelCache: { [key: string]: Node },
+    public parentScope: NodeInstance | null
+  ) {
     this.tree = nodeToInstanceNodeTree(node);
     this.names = createNameInstancesFromNode(node, solver);
   }
@@ -113,7 +129,13 @@ export class NodeInstance {
     }
   }
 
+  getInstanceFromDIContext(injectorName: string): Instance | undefined {
+    return resolveFromParentWithDI(injectorName, this);
+  }
+
+  public lastInitialValue: { [key: string]: Instance } = {};
   init(initialValue: { [key: string]: Instance }) {
+    this.lastInitialValue = initialValue;
     // TODO: resolve names
     // handle property default overrides
     this.tree.dependecies.forEach(dep => {
@@ -260,8 +282,15 @@ function resolve(tree: InstanceNodeTree, initialValue: { [key: string]: Instance
   if (isProperty(source)) {
     if (source.defaultOption == null) {
       const name = source.name;
-      const value = initialValue[name];
-      if (value == null) throw new Error(name + " is required");
+      let value: Instance | undefined = initialValue[name];
+      if (value == null) {
+        if (source.injected != null) {
+          value = scope.getInstanceFromDIContext(source.injected);
+          if (value == null) throw new Error(name + " is required but cannot inject it from " + source.injected);
+        } else {
+          throw new Error(name + " is required");
+        }
+      }
       tree.instance = value;
     } else {
       tree.instance = tree.dependecies[0].instance!;
@@ -303,13 +332,25 @@ type CondValueExp = {
 
 function resolveAccessChain(
   chain: string[],
-  currentNode: InstanceNodeTree,
+  currentNode: InstanceNodeTree | NodeInstance,
   inParams?: Instance[]
 ): Instance | undefined {
+  if (currentNode instanceof NodeInstance) {
+    const propName = chain[0];
+    const prop = currentNode.tree.dependecies.find(x => (x.node.refrence.value as Property).name === propName);
+    if (chain.length > 2) {
+      return resolveAccessChain(chain.slice(1, chain.length), prop!, inParams);
+    } else {
+      return prop!.instance;
+    }
+  }
   if (currentNode.instance == null) throw new Error("Unhandle scenario!");
   if (currentNode.instance instanceof NodeInstance) {
     const propName = chain[1];
-    const prop = (currentNode.dependecies[0].instance as NodeInstance).tree.dependecies.find(
+    let instance: any = currentNode.dependecies[0];
+    if (instance == null) instance = currentNode.instance;
+    else instance = instance.instance;
+    const prop = (instance as NodeInstance).tree.dependecies.find(
       x => (x.node.refrence.value as Property).name === propName
     );
     if (chain.length > 2) {
@@ -324,6 +365,9 @@ function resolveAccessChain(
       map(params => {
         const current = chain[1]; // chain[0] is instance itself
         const currentInstance = params[0] as any;
+        if (currentInstance instanceof NodeInstance) {
+          return resolveAccessChain(chain.slice(1, chain.length), currentInstance, inParams);
+        }
         if (chain.length === 2) {
           if (inParams == null) {
             return currentInstance[current];
@@ -337,6 +381,10 @@ function resolveAccessChain(
           throw new Error("cannot resolve primitive nested functions");
           // return resolveAccessChain(chain.slice(1, chain.length), x);
         }
+      }),
+      flatMap(x => {
+        if (isObservable(x)) return x;
+        return new BehaviorSubject(x);
       })
     );
   }
@@ -374,11 +422,20 @@ function handleAtom(
     if (refrenceCtx != null) {
       const memberAccessCtx = refrenceCtx.labelRefrenceMemberAccessExpression();
       if (memberAccessCtx != null) {
-        tree.instance = resolveAccessChain(
-          memberAccessCtx.IDENTIFIER().map(x => x.text),
-          tree.dependecies[0]
-        );
-
+        const chain = memberAccessCtx.IDENTIFIER().map(x => x.text)
+        if (chain.length === 1) {
+          if (tree.node.dependencies !== NOT_WALKED_YET && isInstance(tree.node.dependencies[0].refrence.value)) {
+            // it's a direct value from forEach or ...
+            tree.instance = tree.node.dependencies[0].refrence.value;
+          } else {
+            tree.instance = tree.dependecies[0].instance;
+          }
+        } else {
+          tree.instance = resolveAccessChain(
+            chain,
+            tree.dependecies[0]
+          );
+        }
         return;
       }
 
@@ -393,13 +450,6 @@ function handleAtom(
           tree.dependecies.slice(1, tree.dependecies.length).map(x => x.instance!)
         );
         return;
-      }
-
-      if (tree.node.dependencies !== NOT_WALKED_YET && isInstance(tree.node.dependencies[0].refrence.value)) {
-        // it's a direct value from forEach or ...
-        tree.instance = tree.node.dependencies[0].refrence.value;
-      } else {
-        tree.instance = tree.dependecies[0].instance;
       }
       return;
     }
@@ -456,7 +506,7 @@ function handleAtom(
     const newStructCtx = source.newStructExpression();
     if (newStructCtx != null) {
       const structName = newStructCtx.refrenceName().text;
-      const struct = scope.solver.instantiateStruct(structName) as NodeInstance;
+      const struct = scope.solver.instantiateStruct(structName, scope) as NodeInstance;
       // collect parameters
       let params: { [key: string]: Instance } = {};
       let paramNames: string[];

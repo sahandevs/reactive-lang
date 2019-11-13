@@ -19,29 +19,38 @@ import { StructPropertyDependencyAnalyzer } from "./Solver/Analyzer/StructProper
 import { NodeInstance } from "./Solver/NodeInstance";
 import { BehaviorSubject } from "rxjs";
 const example = `
-@TestAttr()
-struct ($this Test) {
+struct ($this View) {
 
-  propIn: Core:Boolean
-  
-  text: Core:String default ("hi !")
-  
-  dep: Dep default(Dep())
-  
-  @TestAttr
-  isTextLongEnough: Core:Boolean default(
-      $this.dep.innerText.startsWith(string: "hi")
-  )
-
+  localization: Core:Localization injected(LanguageContext)
+  text: Core:String default ("Your word is =:" + $this.localization.hello)
 
 }
 
-@HiaATT(aa: "test")
-struct Dep {
+name LanguageContext
 
-    innerText: Core:String default (":)")
+struct ($this Application) {
 
-}`;
+    currentLanguage: Core:String
+
+    localization: Core:Localization injector(LanguageContext) default (
+        Localization(lan: $this.currentLanguage)
+    )
+    
+    view: View default (View())
+}
+
+struct ($this Localization) { 
+
+  lan: Core:String
+
+  hello: Core:String default (
+    if ($this.lan == "fa")
+        "Salam"
+    else
+        "Hello"
+  )
+}
+`;
 const App: React.FC = () => {
   const [logValue, setLogValue] = React.useState("");
   const [errorValue, setErrorValue] = React.useState("");
@@ -144,9 +153,11 @@ ${e}
               <button
                 onClick={() => {
                   const _nodeInstance = solver.instantiateStruct(structFullName) as NodeInstance;
+                  const _input = new BehaviorSubject("fa");
                   _nodeInstance.init({
-                    propIn: new BehaviorSubject(true)
+                    currentLanguage: _input
                   });
+                  console.log("currentLanguge ===========> in", _input);
                   logInstance(_nodeInstance);
                   console.log(_nodeInstance);
                 }}

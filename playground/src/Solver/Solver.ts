@@ -39,9 +39,10 @@ function getStructFromFullname(fullname: string, namespace: Namespace): Struct {
     const namespacePath = parts.slice(0, parts.length - 1);
     let reducedName = namespacePath.slice(1, namespacePath.length).join(":") + ":" + structName;
     reducedName = reducedName.startsWith(":") ? reducedName.substring(1, reducedName.length) : reducedName;
-    return getStructFromFullname(reducedName, namespace.children.find(
-      x => isNamespace(x) && x.name === namespacePath[0]
-    ) as Namespace);
+    return getStructFromFullname(
+      reducedName,
+      namespace.children.find(x => isNamespace(x) && x.name === namespacePath[0]) as Namespace
+    );
   }
 }
 
@@ -70,7 +71,7 @@ export class Solver {
   }
 
   getStructsByAttribute(name: string): Struct[] {
-    return this.structs.filter(x => x.attributes.find(a => a.name === name) != null)
+    return this.structs.filter(x => x.attributes.find(a => a.name === name) != null);
   }
 
   getName(name: RefrenceNameContext): NameInstance | undefined {
@@ -86,12 +87,12 @@ export class Solver {
     return this.structs.map(x => getStructFullName(x));
   }
 
-  instantiateStruct(fullName: string, defaultValue: any = null): Instance {
+  instantiateStruct(fullName: string, scope: NodeInstance | null = null): Instance {
     let instance = this.tryInstantiateCoreTypes(fullName);
     if (instance) return instance;
     const struct = getStructFromFullname(fullName, this.root);
     const node = new StructPropertyDependencyAnalyzer(struct);
-    let _nodeInstance = new NodeInstance(node.rootNode, this, node.labelCache);
+    let _nodeInstance = new NodeInstance(node.rootNode, this, node.labelCache, scope);
     return _nodeInstance;
   }
 

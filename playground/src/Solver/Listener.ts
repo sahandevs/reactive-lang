@@ -104,11 +104,25 @@ export class ReactiveListener implements ReactiveGrammerListener {
   enterPropertyDefinition(ctx: C.PropertyDefinitionContext) {
     let propertyDefaultOptionContext: C.PropertyDefaultOptionContext | null = null;
     let readonly: boolean = false;
+    let injector: string | null = null;
+    let injected: string | null = null;
     ctx.propertyOptions().forEach(option => {
       propertyDefaultOptionContext = option.propertyDefaultOption()!;
       if (option.propertyReadonlyOption() != null) {
         readonly = true;
       }
+
+      const injectorCtx = option.propertyInjectorOption();
+      if (injectorCtx != null) {
+        injector = injectorCtx.typeRefrence().text 
+      }
+
+      
+      const injectedCtx = option.propertyInjectedOption();
+      if (injectedCtx != null) {
+        injected = injectedCtx.typeRefrence().text 
+      }
+
     });
 
     const property: Property = {
@@ -117,6 +131,8 @@ export class ReactiveListener implements ReactiveGrammerListener {
       typeName: {
         name: ctx.typeRefrence().text
       },
+      injector: injector,
+      injected: injected,
       type: NodeTypes.Property,
       attributes: [],
       defaultOption:

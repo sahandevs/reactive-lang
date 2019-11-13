@@ -57,7 +57,9 @@ export interface Property {
   parent: Struct;
   defaultOption: PropertyDefaultOption | null;
   readonly: boolean;
-  attributes: AttributeUsageDefinition[]
+  attributes: AttributeUsageDefinition[];
+  injector: string | null;
+  injected: string | null;
 }
 
 export enum NodeTypes {
