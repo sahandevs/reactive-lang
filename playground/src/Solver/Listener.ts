@@ -1,7 +1,7 @@
 import * as C from "../Parser/ReactiveGrammerParser";
 import { ReactiveGrammerListener } from "../Parser/ReactiveGrammerListener";
 import { describeNamespaceTree } from "./Utils";
-import { Namespace, Struct, NodeTypes, Property, NameDefinition } from "./Models";
+import { Namespace, Struct, NodeTypes, Property, NameDefinition, MixinDefinition } from "./Models";
 import { Solver } from "./Solver";
 
 export class ReactiveListener implements ReactiveGrammerListener {
@@ -49,13 +49,26 @@ export class ReactiveListener implements ReactiveGrammerListener {
   currentStruct: Struct | null = null;
 
   enterStructDefinition(ctx: C.StructDefinitionContext) {
+    const mixins: MixinDefinition[] = [];
+    const whichIsCtx = ctx.structWhichIsDefinition();
+    if (whichIsCtx != null) {
+      whichIsCtx.labelableRefrenceName().forEach(ref => {
+        let label = ref.label();
+        let name = ref.refrenceName().text;
+        mixins.push({
+          label: label == null ? undefined : label.text,
+          refrenceName: name
+        });
+      });
+    }
     const struct: Struct = {
       type: NodeTypes.Struct,
       name: ctx.labelableIdentifier().IDENTIFIER().text,
       parent: this.currentNamespace,
       properties: [],
       names: [],
-      context: ctx
+      context: ctx,
+      mixins: mixins
     };
     this.currentNamespace.children.push(struct);
     this.currentStruct = struct;

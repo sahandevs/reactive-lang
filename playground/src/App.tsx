@@ -19,32 +19,18 @@ import { StructPropertyDependencyAnalyzer } from "./Solver/Analyzer/StructProper
 import { NodeInstance } from "./Solver/NodeInstance";
 import { BehaviorSubject } from "rxjs";
 const example = `
-struct ($this Test) {
-  propIn: Core:Boolean
-  
-  options: Core:List of Core:String default (
-    if (false)
-        Core:String#[3,4,5,]
-    else
-        Core:String#[1,2,3,]
-  )
-  
-  prop1: Core:List of Core:String default (Core:String#[
-    "[TEST]",
-    foreach ($item in $this.options)
-        if ($this.propIn)
-            1
-        else
-            2,
-  ])
+struct Base {
+
+    hi: Core:String default ("Hello from base")
+
 }
 
-
-struct Data {
-
-    value: Core:String
-
-}`;
+struct ($this Test) which is ($base Base) {
+  propIn: Core:Boolean
+  
+  combineFromMixin: Core:String default ($base.hi + " and Test struct") 
+}
+`;
 const App: React.FC = () => {
   const [logValue, setLogValue] = React.useState("");
   const [errorValue, setErrorValue] = React.useState("");

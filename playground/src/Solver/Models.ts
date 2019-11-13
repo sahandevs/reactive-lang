@@ -1,4 +1,8 @@
-import { PropertyDefaultOptionContext, StructDefinitionContext, NameDefinitionContext } from "../Parser/ReactiveGrammerParser";
+import {
+  PropertyDefaultOptionContext,
+  StructDefinitionContext,
+  NameDefinitionContext
+} from "../Parser/ReactiveGrammerParser";
 
 export type Identifier = string;
 
@@ -15,7 +19,12 @@ export interface TypeName {
 }
 
 export interface NameDefinition {
-  context: NameDefinitionContext
+  context: NameDefinitionContext;
+}
+
+export interface MixinDefinition {
+  label?: string;
+  refrenceName: string;
 }
 
 export interface Struct {
@@ -25,6 +34,7 @@ export interface Struct {
   properties: Property[];
   names: NameDefinition[];
   context: StructDefinitionContext;
+  mixins: MixinDefinition[];
 }
 
 export interface PropertyDefaultOption {
@@ -38,7 +48,7 @@ export interface Property {
   typeName: TypeName;
   parent: Struct;
   defaultOption: PropertyDefaultOption | null;
-  readonly: boolean
+  readonly: boolean;
 }
 
 export enum NodeTypes {

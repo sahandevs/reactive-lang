@@ -1,4 +1,4 @@
-import { Struct, Property, isStruct, isProperty } from "../Models";
+import { Struct, Property, isStruct, isProperty, MixinDefinition } from "../Models";
 import {
   ExpressionContext,
   AtomContext,
@@ -19,6 +19,7 @@ type ResolvedRefrence =
   | UnknownLabelRefrence
   | RefrenceNameContext
   | ArrayMemberContext
+  | MixinDefinition
   | Instance;
 
 export enum ArrayMemberRefrenceType {
@@ -68,8 +69,20 @@ export class StructPropertyDependencyAnalyzer {
   }
 
   analyze() {
+    // add all mixins
+    const mixins: Node[] = this.root.mixins.map(mixin => {
+      return {
+        // TODO: mixin dependencies are overrides in current struct ( overrides )
+        dependencies: [],
+        refrence: {
+          label: mixin.label,
+          isRaw: false,
+          value: mixin
+        }
+      }
+    });
     // add all properties to the rootNode
-    this.rootNode.dependencies = this.root.properties.map(x => {
+    const properties: Node[] = this.root.properties.map(x => {
       return {
         dependencies: NOT_WALKED_YET,
         refrence: {
@@ -78,9 +91,9 @@ export class StructPropertyDependencyAnalyzer {
         }
       };
     });
+    this.rootNode.dependencies = [...mixins, ...properties];
     this.resolveNodeDependencies(this.rootNode);
     this.resolveRawRefrences(this.rootNode);
-    console.log(this.rootNode);
   }
 
   resolveNodeDependencies(node: Node) {
