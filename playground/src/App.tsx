@@ -18,7 +18,9 @@ import { StructDependencyAnalyzer } from "./Solver/Analyzer/StructDependencyAnal
 import { StructPropertyDependencyAnalyzer } from "./Solver/Analyzer/StructPropertyDependencyAnalyzer";
 import { NodeInstance } from "./Solver/NodeInstance";
 import { BehaviorSubject } from "rxjs";
-const example = `struct ($this Test) {
+const example = `
+@TestAttr()
+struct ($this Test) {
 
   propIn: Core:Boolean
   
@@ -26,6 +28,7 @@ const example = `struct ($this Test) {
   
   dep: Dep default(Dep())
   
+  @TestAttr
   isTextLongEnough: Core:Boolean default(
       $this.dep.innerText.startsWith(string: "hi")
   )
@@ -33,6 +36,7 @@ const example = `struct ($this Test) {
 
 }
 
+@HiaATT(aa: "test")
 struct Dep {
 
     innerText: Core:String default (":)")

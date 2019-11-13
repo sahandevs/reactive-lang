@@ -1,8 +1,18 @@
 import * as C from "../Parser/ReactiveGrammerParser";
 import { ReactiveGrammerListener } from "../Parser/ReactiveGrammerListener";
 import { describeNamespaceTree } from "./Utils";
-import { Namespace, Struct, NodeTypes, Property, NameDefinition, MixinDefinition } from "./Models";
+import {
+  Namespace,
+  Struct,
+  NodeTypes,
+  Property,
+  NameDefinition,
+  MixinDefinition,
+  AttributeUsageDefinition
+} from "./Models";
 import { Solver } from "./Solver";
+
+const zip = (arr1: any[], arr2: any[]) => arr1.map((k, i) => [k, arr2[i]]);
 
 export class ReactiveListener implements ReactiveGrammerListener {
   rootNamespace: Namespace;
@@ -68,7 +78,8 @@ export class ReactiveListener implements ReactiveGrammerListener {
       properties: [],
       names: [],
       context: ctx,
-      mixins: mixins
+      mixins: mixins,
+      attributes: []
     };
     this.currentNamespace.children.push(struct);
     this.currentStruct = struct;
@@ -89,6 +100,7 @@ export class ReactiveListener implements ReactiveGrammerListener {
     }
   }
 
+  currentProperty: Property | null = null;
   enterPropertyDefinition(ctx: C.PropertyDefinitionContext) {
     let propertyDefaultOptionContext: C.PropertyDefaultOptionContext | null = null;
     let readonly: boolean = false;
@@ -106,6 +118,7 @@ export class ReactiveListener implements ReactiveGrammerListener {
         name: ctx.typeRefrence().text
       },
       type: NodeTypes.Property,
+      attributes: [],
       defaultOption:
         propertyDefaultOptionContext == null
           ? null
@@ -115,7 +128,41 @@ export class ReactiveListener implements ReactiveGrammerListener {
             },
       readonly: readonly
     };
+    this.currentProperty = property;
     this.currentStruct!.properties.push(property);
+  }
+
+  exitPropertyDefinition() {
+    this.currentProperty = null;
+  }
+
+  enterAttributeUsage(ctx: C.AttributeUsageContext) {
+    const attrNameTerminal = ctx.ATTRIBUTE_USAGE_NAME().text;
+    let parameters: { [key: string]: string } = {};
+    const paramCtx = ctx.parameters();
+    if (paramCtx != null) {
+      const paramBodyCtx = paramCtx.parameterBody();
+      if (paramBodyCtx != null) {
+        zip(paramBodyCtx.IDENTIFIER(), paramBodyCtx.expression()).forEach(
+          ([name, value]) => (parameters[name.text] = value.text)
+        );
+      }
+    }
+    const attr: AttributeUsageDefinition = {
+      context: ctx,
+      name: attrNameTerminal.substring(1, attrNameTerminal.length),
+      parameters: parameters
+    };
+
+    if (this.currentProperty != null) {
+      this.currentProperty.attributes.push(attr);
+      return;
+    }
+
+    if (this.currentStruct != null) {
+      this.currentStruct.attributes.push(attr);
+      return;
+    }
   }
 
   exitSourceFile() {
