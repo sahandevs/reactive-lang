@@ -318,7 +318,7 @@ function resolveAccessChain(
       return prop!.instance;
     }
   } else {
-    const _params = inParams!;
+    const _params = inParams || [];
     const value = combineLatest([currentNode.instance, ..._params]);
     return value.pipe(
       map(params => {
@@ -331,6 +331,8 @@ function resolveAccessChain(
             // is a function call
             return currentInstance[current](...params.slice(1, params.length));
           }
+        } else if (chain.length === 1) {
+          return currentInstance;
         } else {
           throw new Error("cannot resolve primitive nested functions");
           // return resolveAccessChain(chain.slice(1, chain.length), x);
