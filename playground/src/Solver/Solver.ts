@@ -69,6 +69,10 @@ export class Solver {
     // analyzer
   }
 
+  getStructsByAttribute(name: string): Struct[] {
+    return this.structs.filter(x => x.attributes.find(a => a.name === name) != null)
+  }
+
   getName(name: RefrenceNameContext): NameInstance | undefined {
     const target = `root:${name.text}`;
     return this.globalNames.find(x => x.name === target);

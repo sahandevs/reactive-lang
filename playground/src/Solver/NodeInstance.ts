@@ -95,6 +95,12 @@ export class NodeInstance {
     return this.tree.dependecies.map(x => (x.node.refrence.value as Property).name);
   }
 
+  getPropertiesByAttribute(name: string): InstanceNodeTree[] {
+    return this.tree.dependecies.filter(
+      p => (p.node.refrence.value as Property).attributes.find(a => a.name === name) != null
+    );
+  }
+
   getName(name: RefrenceNameContext | LabelRefrenceMemberAccessExpressionContext): NameInstance | undefined {
     // if is LabelRefrenceMemberAccessExpressionContext => find in NodeInstance
     if (name instanceof LabelRefrenceMemberAccessExpressionContext) {
