@@ -3,6 +3,8 @@ import { NodeInstance, Instance, NameInstance } from "./NodeInstance";
 import { Observable, BehaviorSubject } from "rxjs";
 import { StructPropertyDependencyAnalyzer } from "./Analyzer/StructPropertyDependencyAnalyzer";
 import { RefrenceNameContext } from "../Parser/ReactiveGrammerParser";
+import { isSubject } from "./Utils";
+import { map } from "rxjs/operators";
 
 export interface Application {
   root: Namespace;
@@ -87,32 +89,52 @@ export class Solver {
     return this.structs.map(x => getStructFullName(x));
   }
 
-  instantiateStruct(fullName: string, scope: NodeInstance | null = null): Instance {
-    let instance = this.tryInstantiateCoreTypes(fullName);
+  instantiateStruct(
+    fullName: string,
+    scope: NodeInstance | null = null,
+    defaultValue?: { [key: string]: Instance }
+  ): Instance {
+    let instance = this.tryInstantiateCoreTypes(fullName, defaultValue);
     if (instance) return instance;
     const struct = getStructFromFullname(fullName, this.root);
     const node = new StructPropertyDependencyAnalyzer(struct);
     let _nodeInstance = new NodeInstance(node.rootNode, this, node.labelCache, scope);
+    if (defaultValue != null) {
+      _nodeInstance.init(defaultValue);
+    }
     return _nodeInstance;
   }
 
-  tryInstantiateCoreTypes(fullName: string, isVar: boolean = false, defaultValue: any = null): Observable<any> | null {
+  tryInstantiateCoreTypes(
+    fullName: string,
+    defaultValue?: { [key: string]: Instance },
+    isVar = true
+  ): Observable<any> | null {
     let observable: BehaviorSubject<any> | null = null;
     if (fullName === `Core:String`) {
-      observable = new BehaviorSubject(defaultValue);
+      observable = new BehaviorSubject(defaultValue!["value"]!);
     } else if (fullName === `Core:Int`) {
-      observable = new BehaviorSubject(defaultValue);
+      observable = new BehaviorSubject(defaultValue!["value"]!);
     } else if (fullName.startsWith(`Core:List`)) {
-      observable = new BehaviorSubject(defaultValue);
+      observable = new BehaviorSubject(defaultValue!["value"]!);
     } else if (fullName.startsWith(`Core:Core:NamedCollection`)) {
-      observable = new BehaviorSubject(defaultValue);
+      observable = new BehaviorSubject(defaultValue!["value"]!);
     } else if (fullName.startsWith(`Core:Var`)) {
       const reducedName = fullName
         .replace(`Core:Var`, "")
         .replace("of", "")
         .trimLeft();
-      observable = this.tryInstantiateCoreTypes(reducedName, true, defaultValue) as any;
+      observable = this.tryInstantiateCoreTypes(reducedName, defaultValue, true) as any;
       isVar = true;
+    } else if (fullName === `Core:Set`) { 
+      const variableToSet = defaultValue!["variable"] as BehaviorSubject<any>;
+      if (!isSubject(variableToSet)) {
+        throw new Error("var must be a Subject (a property without any expressions)");
+      }
+      console.log(variableToSet);
+      const expression = defaultValue!["value"] as Observable<any>;
+      return expression.pipe(map(x => () => variableToSet.next(x)));
+    } else if (fullName === `Core:Log`) {
     }
 
     if (observable != null && !isVar) {

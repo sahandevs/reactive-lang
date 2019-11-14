@@ -21,6 +21,7 @@ import {
 import { isProperty, NameDefinition, Namespace, Struct, isStruct, Property } from "./Models";
 import { isArray } from "util";
 import { flattenObservables } from "./Analyzer/Utils";
+import { isSubject } from "./Utils";
 export type Instance = Observable<any> | NodeInstance;
 
 type InstanceNodeTree = {
@@ -193,55 +194,57 @@ function handleExpression(
 
     if (operator === "+") {
       tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-        map(([a, b]) => a + b)
+        map(([a, b]) => {
+          return (isSubject(a) ? a.value : a) + (isSubject(b) ? b.value : b)
+        })
       );
     } else if (operator === "-") {
       tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-        map(([a, b]) => a - b)
+        map(([a, b]) => (isSubject(a) ? a.value : a) + (isSubject(b) ? b.value : b))
       );
     } else if (operator === "*") {
       tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-        map(([a, b]) => a * b)
+        map(([a, b]) => (isSubject(a) ? a.value : a) * (isSubject(b) ? b.value : b))
       );
     } else if (operator === "/") {
       tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-        map(([a, b]) => a / b)
+        map(([a, b]) =>(isSubject(a) ? a.value : a) / (isSubject(b) ? b.value : b))
       );
     } else if (operator === "-") {
       tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-        map(([a, b]) => a - b)
+        map(([a, b]) =>(isSubject(a) ? a.value : a) - (isSubject(b) ? b.value : b))
       );
     } else if (operator === ">") {
       tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-        map(([a, b]) => a > b)
+        map(([a, b]) => (isSubject(a) ? a.value : a) > (isSubject(b) ? b.value : b))
       );
     } else if (operator === ">=") {
       tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-        map(([a, b]) => a >= b)
+        map(([a, b]) => (isSubject(a) ? a.value : a) >= (isSubject(b) ? b.value : b))
       );
     } else if (operator === "<") {
       tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-        map(([a, b]) => a < b)
+        map(([a, b]) => (isSubject(a) ? a.value : a) < (isSubject(b) ? b.value : b))
       );
     } else if (operator === "<=") {
       tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-        map(([a, b]) => a <= b)
+        map(([a, b]) => (isSubject(a) ? a.value : a) <= (isSubject(b) ? b.value : b))
       );
     } else if (operator === "or") {
       tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-        map(([a, b]) => a || b)
+        map(([a, b]) => (isSubject(a) ? a.value : a) || (isSubject(b) ? b.value : b))
       );
     } else if (operator === "and") {
       tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-        map(([a, b]) => a && b)
+        map(([a, b]) => (isSubject(a) ? a.value : a) && (isSubject(b) ? b.value : b))
       );
     } else if (operator === "==") {
       tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-        map(([a, b]) => a === b)
+        map(([a, b]) => (isSubject(a) ? a.value : a) === (isSubject(b) ? b.value : b))
       );
     } else if (operator === "!=") {
       tree.instance = combineLatest(tree.dependecies[0].instance!, tree.dependecies[1].instance!).pipe(
-        map(([a, b]) => a !== b)
+        map(([a, b]) => (isSubject(a) ? a.value : a) !== (isSubject(b) ? b.value : b))
       );
     } else {
       throw new Error("operator " + operator + " not supported yet!");
@@ -422,7 +425,7 @@ function handleAtom(
     if (refrenceCtx != null) {
       const memberAccessCtx = refrenceCtx.labelRefrenceMemberAccessExpression();
       if (memberAccessCtx != null) {
-        const chain = memberAccessCtx.IDENTIFIER().map(x => x.text)
+        const chain = memberAccessCtx.IDENTIFIER().map(x => x.text);
         if (chain.length === 1) {
           if (tree.node.dependencies !== NOT_WALKED_YET && isInstance(tree.node.dependencies[0].refrence.value)) {
             // it's a direct value from forEach or ...
@@ -431,10 +434,7 @@ function handleAtom(
             tree.instance = tree.dependecies[0].instance;
           }
         } else {
-          tree.instance = resolveAccessChain(
-            chain,
-            tree.dependecies[0]
-          );
+          tree.instance = resolveAccessChain(chain, tree.dependecies[0]);
         }
         return;
       }
@@ -506,7 +506,7 @@ function handleAtom(
     const newStructCtx = source.newStructExpression();
     if (newStructCtx != null) {
       const structName = newStructCtx.refrenceName().text;
-      const struct = scope.solver.instantiateStruct(structName, scope) as NodeInstance;
+
       // collect parameters
       let params: { [key: string]: Instance } = {};
       let paramNames: string[];
@@ -518,8 +518,9 @@ function handleAtom(
       tree.dependecies.forEach((dep, i) => {
         params[paramNames[i]] = dep.instance!;
       });
-      struct.init(params);
-      tree.instance = struct;
+
+      const instance = scope.solver.instantiateStruct(structName, scope, params) as Instance;
+      tree.instance = instance;
       return;
     }
 
@@ -698,19 +699,19 @@ function makePrimitive(atom: PrimitiveExpressionContext): Observable<any> {
   if (stringCtx != null) {
     let value = stringCtx.text;
     value = value.substring(1, value.length - 1);
-    return new BehaviorSubject<string>(value).asObservable();
+    return new BehaviorSubject<string>(value);
   }
 
   const boolCtx = atom.BooleanLiteral();
   if (boolCtx != null) {
     let value = boolCtx.text === "true";
-    return new BehaviorSubject<boolean>(value).asObservable();
+    return new BehaviorSubject<boolean>(value);
   }
 
   const numberCtx = atom.NumberLiteral();
   if (numberCtx != null) {
     let value = Number(numberCtx.text);
-    return new BehaviorSubject<number>(value).asObservable();
+    return new BehaviorSubject<number>(value);
   }
 
   throw new Error("primitive type not supported!");

@@ -19,37 +19,28 @@ import { StructPropertyDependencyAnalyzer } from "./Solver/Analyzer/StructProper
 import { NodeInstance } from "./Solver/NodeInstance";
 import { BehaviorSubject } from "rxjs";
 const example = `
-struct ($this View) {
+struct ($this Test) {
 
-  localization: Core:Localization injected(LanguageContext)
-  text: Core:String default ("Your word is =:" + $this.localization.hello)
+  currentLanguage: Core:String
+  
+  combine: Core:String default ($this.currentLanguage + " :)")
+
+
+  action: Core:Action default (
+      Core:Set(variable: $this.currentLanguage, value: "test")
+  )
 
 }
 
-name LanguageContext
+struct ($this App) {
 
-struct ($this Application) {
-
-    currentLanguage: Core:String
-
-    localization: Core:Localization injector(LanguageContext) default (
-        if ($this.currentLanguage == "fa")
-          LocalizationFa()
-         else
-          LocalizationEn()
-    )
+    value: Core:String default (Core:String(value: ""))
     
-    view: View default (View())
-}
+    valToObserve: Core:String default ($this.value + "<=")
+    
+    sub: Test default (Test(currentLanguage: $this.value))
 
-struct ($this LocalizationFa) { 
 
-  hello: Core:String default ("Salam")
-}
-
-struct ($this LocalizationEn) { 
-
-  hello: Core:String default ("Hello")
 }
 `;
 const App: React.FC = () => {
