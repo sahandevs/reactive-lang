@@ -1,6 +1,6 @@
 import { Namespace, Struct, isNamespace, isStruct } from "./Models";
 import { NodeInstance, Instance, NameInstance } from "./NodeInstance";
-import { Observable, BehaviorSubject } from "rxjs";
+import { Observable, BehaviorSubject, combineLatest } from "rxjs";
 import { StructPropertyDependencyAnalyzer } from "./Analyzer/StructPropertyDependencyAnalyzer";
 import { RefrenceNameContext } from "../Parser/ReactiveGrammerParser";
 import { isSubject } from "./Utils";
@@ -126,14 +126,17 @@ export class Solver {
         .trimLeft();
       observable = this.tryInstantiateCoreTypes(reducedName, defaultValue, true) as any;
       isVar = true;
-    } else if (fullName === `Core:Set`) { 
+    } else if (fullName === `Core:Set`) {
       const variableToSet = defaultValue!["variable"] as BehaviorSubject<any>;
       if (!isSubject(variableToSet)) {
         throw new Error("var must be a Subject (a property without any expressions)");
       }
-      console.log(variableToSet);
       const expression = defaultValue!["value"] as Observable<any>;
-      return expression.pipe(map(x => () => variableToSet.next(x)));
+      return expression.pipe(
+        map(value => () => {
+          variableToSet.next(new BehaviorSubject(value));
+        })
+      );
     } else if (fullName === `Core:Log`) {
     }
 
