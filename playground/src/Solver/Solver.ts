@@ -1,6 +1,6 @@
 import { Namespace, Struct, isNamespace, isStruct } from "./Models";
 import { NodeInstance, Instance, NameInstance } from "./NodeInstance";
-import { Observable, BehaviorSubject, combineLatest } from "rxjs";
+import { Observable, BehaviorSubject } from "rxjs";
 import { StructPropertyDependencyAnalyzer } from "./Analyzer/StructPropertyDependencyAnalyzer";
 import { RefrenceNameContext } from "../Parser/ReactiveGrammerParser";
 import { isSubject } from "./Utils";

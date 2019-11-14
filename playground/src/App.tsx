@@ -18,32 +18,10 @@ import { StructDependencyAnalyzer } from "./Solver/Analyzer/StructDependencyAnal
 import { StructPropertyDependencyAnalyzer } from "./Solver/Analyzer/StructPropertyDependencyAnalyzer";
 import { NodeInstance } from "./Solver/NodeInstance";
 import { BehaviorSubject } from "rxjs";
-const example = `
-struct ($this Test) {
+const example = localStorage.getItem('code') || "";
 
-  currentLanguage: Core:String
-  
-  combine: Core:String default ($this.currentLanguage + " :)")
-
-
-  action: Core:Action default (
-      Core:Set(variable: $this.currentLanguage, value: "test")
-  )
-
-}
-
-struct ($this App) {
-
-    value: Core:String default (Core:String(value: ""))
-    
-    valToObserve: Core:String default ($this.value + "<=")
-    
-    sub: Test default (Test(currentLanguage: $this.value))
-
-
-}
-`;
 const App: React.FC = () => {
+
   const [logValue, setLogValue] = React.useState("");
   const [errorValue, setErrorValue] = React.useState("");
   const [value, setValue] = React.useState(example);
@@ -60,6 +38,7 @@ const App: React.FC = () => {
   React.useEffect(() => update(value), []); // eslint-disable-line
 
   function update(code: string) {
+    localStorage.setItem('code', code);
     const start = performance.now();
     try {
       setLogValue("");
