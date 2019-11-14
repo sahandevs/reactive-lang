@@ -16,12 +16,11 @@ import { ReactiveGrammerListener } from "./Parser/ReactiveGrammerListener";
 import { Solver } from "./Solver/Solver";
 import { StructDependencyAnalyzer } from "./Solver/Analyzer/StructDependencyAnalyzer";
 import { StructPropertyDependencyAnalyzer } from "./Solver/Analyzer/StructPropertyDependencyAnalyzer";
-import { NodeInstance } from "./Solver/NodeInstance";
+import { NodeInstance, NameInstance } from "./Solver/NodeInstance";
 import { BehaviorSubject } from "rxjs";
-const example = localStorage.getItem('code') || "";
+const example = localStorage.getItem("code") || "";
 
 const App: React.FC = () => {
-
   const [logValue, setLogValue] = React.useState("");
   const [errorValue, setErrorValue] = React.useState("");
   const [value, setValue] = React.useState(example);
@@ -38,7 +37,7 @@ const App: React.FC = () => {
   React.useEffect(() => update(value), []); // eslint-disable-line
 
   function update(code: string) {
-    localStorage.setItem('code', code);
+    localStorage.setItem("code", code);
     const start = performance.now();
     try {
       setLogValue("");
@@ -144,14 +143,20 @@ ${e}
 };
 
 function logInstance(node: NodeInstance) {
-  node.tree.dependecies
-    .forEach((x, i) => {
+  node.tree.dependecies.forEach((x, i) => {
+    try {
       if (x.instance instanceof NodeInstance) {
         logInstance(x.instance!);
+      } else if (x.instance instanceof NameInstance) {
+        x.instance.value.subscribe(p => console.log(i, (x.node.refrence.value as any).name, p));
       } else {
         x.instance!.subscribe(p => console.log(i, (x.node.refrence.value as any).name, p));
       }
-    });
+    } catch (e) {
+      
+    }
+
+  });
 }
 
 export default App;
