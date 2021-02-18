@@ -1,0 +1,248 @@
+### Run
+
+```
+cd playground
+yarn
+yarn start
+```
+
+### Example
+
+```
+namespace Application {
+
+    enum UserType {
+        EndUser
+        ApplicationBuilder
+    }
+
+    struct attribute UserInput {
+        userType: UserType
+    }
+
+    struct attribute ReadOnlyUserInput {
+
+    }
+
+    struct attribute Element {
+
+    }
+
+    struct Localization {
+        textInputPlaceholderStartIfRequired: Core:String default ("Please Enter ")
+        textInputPlaceholderStart: Core:String default ("Enter ")
+        textInputPlaceholderEndIfRequired: Core:String default ("")
+        textInputPlaceholderEnd: Core:String default ("")
+        textInputRequiredIndicator: Core:String default ("*")
+        textInputRequiredInvalidMessage: Core:String default (" is invalid")
+    }
+
+    base struct ApplicationAction which is ($core Core:Actions:Action) {
+
+    }
+
+    struct GotoScreenAction which is ApplicationAction {
+        elementName: Core:Name
+    }
+
+    struct Context {
+        language: Localization
+    }
+
+    base struct View {
+
+    }
+
+    struct ButtonView which is View {
+        value: Core:String default ("")
+        action: Core:Actions:Action
+    }
+
+    struct ContainerView which is View {
+        children: List of View
+    }
+
+    struct TextView which is View {
+        value: Core:String
+    }
+
+    struct KeyboardInputView which is View {
+        value: Core:Subject of (Core:String)
+    }
+
+    name ContextInjector for (Core:DI:Injection)
+
+    base struct ElementDefinition {
+        context: Context injected(ContextInjector)
+        isValid: Core:Boolean default (true)
+        view: View
+    }
+
+    @Element
+    struct ($this ViewElement) which is ($element ElementDefinition) {
+        view: View
+
+        $element view: View readonly default ($this.view)
+    }
+
+    @Element
+    struct ($this TextInputElement) which is ($element ElementDefinition) {
+        @UserInput(userType: UserType.EndUser)
+        value: Core:Subject of Core:String default (var "")
+
+        @UserInput(userType: UserType.ApplicationBuilder)
+        title: Core:String default ("")
+
+        @UserInput(userType: UserType.ApplicationBuilder)
+        isRequired: Core:Boolean default (false)
+
+        @UserInput(userType: UserType.ApplicationBuilder)
+        placeholder: Core:String default (
+            $this.placeholder_start + $this.title + $this.placeholder_end
+        )
+
+        placeholder_start: Core:String default (
+          if ($this.isRequired)
+            $this.context.language.textInputPlaceholderStartIfRequired
+          elseif ($this.isRequired)
+            $this.context.language.textInputPlaceholderStartIfRequired
+          else 
+            $this.context.language.textInputPlaceholderStartIfRequired
+        )
+
+        placeholder_end: Core:String default (
+          if ($this.isRequired)
+            $this.context.language.textInputPlaceholderEnd
+          elseif ($this.isRequired)
+            $this.context.language.textInputPlaceholderEnd
+          else 
+            $this.context.language.textInputPlaceholderEnd
+        )
+
+        @UserInput(userType: UserType.ApplicationBuilder)
+        @ReadOnlyUserInput
+        isPlaceholderLongEnough: Core:Boolean readonly default ($this.title.length > 20)
+
+        @UserInput(userType: UserType.ApplicationBuilder)
+        isAlwaysInvalid: Core:Boolean default (false)
+
+        $element isValid: Core:Boolean default (
+            (not $this.isRequired or $this.value != "")
+            or (not $this.isAlwaysInvalid)
+        )
+
+        $element view: View readonly default (
+          ContainerView(
+                children: View#[
+                    Text(
+                        value: $this.title + (
+                            if ($this.isRequired) $this.context.language.textInputRequiredIndicator else ""
+                        )
+                    ),
+                    KeyboardInputView(value: $this.value),
+                    if (not $this.isValid)
+                        Text(
+                            value: $this.value + $this.context.language.textInputRequiredInvalidMessage
+                        ),
+                ]
+          )
+      )
+
+    }
+
+    struct ($this ScreenElement) which is ($element ElementDefinition) {
+        children: List of Element
+
+        $element isValid: Core:Boolean readonly default (
+            $this.children.isValid.any(value: false)
+        )
+
+        $lement view: View readonly default (ContainerView(
+            children: View#[
+                foreach (element in $this.children)
+                    element.view,
+            ]
+        ))
+    }
+
+    struct attribute StartingPoint {
+
+    }
+
+    name StartElement
+    name EndElement
+
+    struct ($this ApplicationActionHandler) which is ($coreAction Core:Actions:ActionHandler) {
+
+        survey: ApplicationDefinition
+
+        $coreAction handle: Core:Actions:Action arguments(action: Core:Actions:Action) default(
+            if ($args.action is ApplicationAction)
+                $this.handleApplicationAction(action: $args.action)
+            else
+                Core:Actions:Handle(action: $args.action)
+        )
+    }
+
+    base struct ($this ApplicationDefinition) {
+        actionHandler: Core:Actions:ActionHandler injector(Core:Actions:ActionHandlerInjector) default (
+            ApplicationActionHandler(survey: $this.self)
+        )
+        elements: Core:NamedCollection of (Element)
+        activeElement: Core:Var of Core:Name default (Self:StartElement)
+        startElement: Core:Name default (StartElement)
+        endElement: Core:Name default (EndElement)
+        context: Context  injector(ContextInjector) default (Context(language: Localization()))
+    }
+    
+}
+
+
+@StartingPoint
+struct ($this TestApplication) which is ($definition Application:ApplicationDefinition) {
+
+    opinion: Core:String default ("") 
+
+    name Q1
+
+    $definition elements: Core:NamedCollection of (Application:Element) readonly default (
+        Application:Element#{
+            Application:StartElement -> Application:ScreenElement(
+                children: Application:Element#[
+                    Application:ViewElement(view: Application:TextView(value: "Welcome To Application")),
+                    ($startPageName Application:TextInputElement(title: "Your name")),
+                    Application:ViewElement(view: Application:ButtonView(
+                        text: "Next",
+                         action: Application:GotoScreenAction(elementName: $this.Q1)
+                    )),
+                ]
+            ),
+            $this.Q1 -> Application:ScreenElement(
+                children: Application:Element#[
+                    if ($startPage.Name.isRequired)
+                        Application:ViewElement(view: Application:TextView(value: "Hi " + $startPageName.value + "!")),
+                    Application:TextInputElement(title: "Your opinion about this language", value: $this.opinion),
+                    Application:ViewElement(view: Application:ButtonView(
+                        text: "Next",
+                         action: Application:GotoScreenAction(elementName: Application:EndElement)
+                    )),
+                ]
+            ),
+            Application:EndElement -> Application:ScreenElement(
+                children: Application:Element#[
+                    Application:ViewElement(view: Application:TextView(
+                        title: (
+                            if ($this.opinion == "good")
+                                "Thanks for your time!"
+                            else
+                                "why ?!!"
+                        )
+                    )),
+                ]
+            ),
+        }
+    )
+
+}
+
+```
